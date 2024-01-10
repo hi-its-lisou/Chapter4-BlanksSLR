@@ -59,13 +59,15 @@ Surface_sterilized_data
 SLR_DF %>%
   group_by(Year) %>%
   summarise(publications = n()) %>%
-  #Line plot it
-  ggplot(aes(x = Year, y = publications, group = 1)) +
+ggplot(aes(x = Year, y = publications, group = 1)) +
   geom_line() +
   geom_point() +
   theme_minimal()+
-stat_smooth(method = "lm", se = FALSE, formula = y ~ x, color = "blue") +
-  geom_text(aes(x = max(Year), y = max(publications), label = sprintf("R^2 = %.2f", cor(Year, publications)^2)),
+  stat_smooth(method = "lm", se = FALSE, formula = y ~ x, color = "blue") +
+  geom_text(aes(x = max(Year), y = max(publications), 
+                label = sprintf("R^2 = %.2f, p = %.3f", 
+                                cor(Year, publications)^2, 
+                                summary(lm(publications ~ Year))$coefficients[8])),
             hjust = 1, vjust = 1, color = "blue")
 
 #Negative control use through the years

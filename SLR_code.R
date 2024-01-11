@@ -89,7 +89,6 @@ ggplot(summary_df, aes(x = as.factor(Year), y = n, fill = Did_they_use_negative_
   theme_minimal()
 
 #Split the studies that do use negative controls into those that control for contamination and those that don't
-#new summary dataframe to split negative control use further according to year
 summary_df <- SLR_DF %>%
   count(Year, Did_they_use_negative_controls,
         Contamination_Control = Was_there_a_comparison_with_their_samples_to_control_for_contamination) %>%

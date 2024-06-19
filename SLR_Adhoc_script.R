@@ -164,3 +164,19 @@ average_contaminate_proportional_biomass_per_group <- proportion_contaminants_pe
   group_by(controlled_for_contamination) %>%
   summarise(average_contaminant_proportional_biomass = mean(contaminant_proportional_biomass))
 print(average_contaminate_proportional_biomass_per_group)
+
+# t-test for proportion of overlapping taxa 
+overlap_in_controlled_studies <- proportion_contaminants_per_bee_id %>%
+  group_by(bee_id) %>%
+  filter(controlled_for_contamination == "Yes") %>%
+  pull(contaminant_proportional_biomass)
+
+overlap_in_uncontrolled_studies <- proportion_contaminants_per_bee_id %>%
+  group_by(bee_id) %>%
+  filter(controlled_for_contamination == "No") %>%
+  pull(contaminant_proportional_biomass)
+
+# Perform the t-test
+t_test_result <- t.test(overlap_in_controlled_studies, overlap_in_uncontrolled_studies)
+
+print(t_test_result)

@@ -176,7 +176,11 @@ overlap_in_uncontrolled_studies <- proportion_contaminants_per_bee_id %>%
   filter(controlled_for_contamination == "No") %>%
   pull(contaminant_proportional_biomass)
 
-# Perform the t-test
-t_test_result <- t.test(overlap_in_controlled_studies, overlap_in_uncontrolled_studies)
+# Assess the distribution of the data
+shapiro.test(proportion_contaminants_per_bee_id$contaminant_proportional_biomass)
 
-print(t_test_result)
+#The data is not normally distributed, so going with a wilcox test
+mann_whitney_test_result <- wilcox.test(overlap_in_controlled_studies, overlap_in_uncontrolled_studies)
+#met with error: Warning message:
+In wilcox.test.default(overlap_in_controlled_studies, overlap_in_uncontrolled_studies) :
+  cannot compute exact p-value with ties

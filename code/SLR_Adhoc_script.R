@@ -5,7 +5,7 @@ library(tidyverse)
 library(dplyr)
 
 #import the data
-solitary_bee_bacteria_all<- read.delim("Data/adhoc_data.txt", header = TRUE, sep = "\t") %>%
+solitary_bee_bacteria_all<- read.delim("data/adhoc_data.txt", header = TRUE, sep = "\t") %>%
   clean_names()
 print(solitary_bee_bacteria_all)
 

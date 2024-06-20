@@ -5,7 +5,7 @@ library(tidyverse)
 library(dplyr)
 
 #Load the data
-SLR_DF <- read.delim("Data/slr_metadata.txt", header = TRUE, sep = "\t") %>%
+SLR_DF <- read.delim("data/slr_metadata.txt", header = TRUE, sep = "\t") %>%
   clean_names()
 SLR_DF
 colnames(SLR_DF)

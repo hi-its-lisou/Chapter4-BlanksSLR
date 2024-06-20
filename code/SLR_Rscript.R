@@ -201,7 +201,7 @@ summary_df$interaction_level <- factor(
          legend.text = element_text(size = 12),
          legend.position = "bottom"))
 
-ggsave("figure/Figure3b.png", height=9, width=12)
+ggsave("figures/Figure3b.png", height=9, width=12)
 
 ################################################################################
 # Proportion of studies that acknowledge relic DNA

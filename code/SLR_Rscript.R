@@ -110,7 +110,7 @@ controlcontam_prop$dummy <- "Controlled contamination"
 n_studies$dummy <- "Number of Studies"
 
 #Plot it
-neg_prop %>%
+(neg_prop %>%
   ggplot(aes(x = as.factor(year), y = proportion * 100, 
              group = did_they_use_negative_controls,
              colour = "Negative controls")) +
@@ -146,7 +146,9 @@ neg_prop %>%
         axis.text.y.right = element_text(color = "grey"),
         axis.title.y.right = element_text(color = "grey")
   ) +
-  labs(x = "Year", y = "Percentage of studies")
+  labs(x = "Year", y = "Percentage of studies"))
+
+ggsave("figures/Figure3a.png", height=9, width=12)
 
 ################################################################################
 ### Figure 3 - Part B ###
@@ -181,7 +183,7 @@ summary_df$interaction_level <- factor(
 )
 
 #Plot it
-ggplot(summary_df, aes(x = as.factor(year), y = n, fill = interaction_level)) +
+(ggplot(summary_df, aes(x = as.factor(year), y = n, fill = interaction_level)) +
   geom_bar(stat = "identity", position = "stack") +
   labs(
     title = " ",
@@ -197,7 +199,9 @@ ggplot(summary_df, aes(x = as.factor(year), y = n, fill = interaction_level)) +
     )) +
   theme (legend.title = element_blank(),
          legend.text = element_text(size = 12),
-         legend.position = "bottom")
+         legend.position = "bottom"))
+
+ggsave("figure/Figure3b.png", height=9, width=12)
 
 ################################################################################
 # Proportion of studies that acknowledge relic DNA

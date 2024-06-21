@@ -82,32 +82,32 @@ SLR_DF %>%
 #https://github.com/brady-welsh/2023_Controls_MR/blob/main/code/Figure_5.md
 
 #Colour scheme 
-colscheme <- c("Controlled contamination" = "#34A853", "Negative controls" = "#FF9900")
+colscheme <- c("Controlled contamination" = "355E3B", "Negative controls" = "111111")
 
-# Counts of studies per year
-n_studies <- SLR_DF %>%
+# Counts of Publications per year
+n_Publications <- SLR_DF %>%
   group_by(year) %>%
   summarise(publications = n()) 
-n_studies
+n_Publications
 
-#count of studies that used negative controls grouped by year
+#count of Publications that used negative controls grouped by year
 neg_prop <- SLR_DF %>%
   summarise(count = n(), .by = c(year, did_they_use_negative_controls)) %>%
   group_by(year) %>%
   mutate(proportion = count / sum(count)) %>%
   filter(did_they_use_negative_controls == "Yes")
 
-#counts of studies that used sequenced blanks to control for contamination
+#counts of Publications that used sequenced blanks to control for contamination
 controlcontam_prop <- SLR_DF %>%
   summarise(count = n(), .by = c(year, was_there_a_comparison_with_their_samples_to_control_for_contamination)) %>%
   group_by(year) %>%
   mutate(proportion = count / sum(count)) %>%
   filter(was_there_a_comparison_with_their_samples_to_control_for_contamination == "Yes")
 
-# Add a factor level for "Number of Studies" in the control for contamination column for the legend
+# Add a factor level for "Number of Publications" in the control for contamination column for the legend
 neg_prop$dummy <- "Negative controls"
 controlcontam_prop$dummy <- "Controlled contamination"
-n_studies$dummy <- "Number of Studies"
+n_Publications$dummy <- "Number of Publications"
 
 #Plot it
 (neg_prop %>%
@@ -123,17 +123,17 @@ n_studies$dummy <- "Number of Studies"
                                             group = was_there_a_comparison_with_their_samples_to_control_for_contamination,
                                             colour = "Controlled contamination"),
              size = 4) +
-  geom_line(data = n_studies, 
+  geom_line(data = n_Publications, 
             aes(x = as.factor(year), y = publications, group = dummy, colour = dummy, linetype = dummy), 
             linewidth = 1,
             linetype = "dashed") +
   scale_y_continuous(
     name = "Percentage of studies",
-    sec.axis = sec_axis(~ ., name = "Number of Studies"),
+    sec.axis = sec_axis(~ ., name = "Number of Publications"),
     labels = scales::label_percent(scale = 1)
   ) +
-  scale_color_manual(values = c(colscheme, "Number of Studies" = "grey")) +
-  scale_linetype_manual(values = c("Number of Studies" = "dashed", "Negative controls" = "solid", "Controlled contamination" = "solid")) +
+  scale_color_manual(values = c(colscheme, "Number of Publications" = "grey")) +
+  scale_linetype_manual(values = c("Number of Publications" = "dashed", "Negative controls" = "solid", "Controlled contamination" = "solid")) +
   theme_classic() +
   theme(legend.title = element_blank(),
         legend.text = element_text(size = 12),
@@ -148,7 +148,7 @@ n_studies$dummy <- "Number of Studies"
   ) +
   labs(x = "Year", y = "Percentage of studies"))
 
-ggsave("figures/Figure3a.png", height=9, width=12)
+ggsave("figures/Figure3a.png", height=6, width=9)
 
 ################################################################################
 ### Figure 3 - Part B ###
@@ -193,13 +193,18 @@ summary_df$interaction_level <- factor(
   ) +
   scale_fill_manual(
     values = c(
-      "No Negative Controls" = "red",
+      "No Negative Controls" = "blue",
       "Used negative controls, but did not control for contamination" = "111111",
       "Used negative controls and controlled for contamination" = "355E3B"
     )) +
   theme (legend.title = element_blank(),
          legend.text = element_text(size = 12),
-         legend.position = "bottom"))
+         legend.position = "right", 
+         axis.title = element_text(size = 14),
+         axis.text = element_text(size = 14),
+         axis.text.x = element_text(angle = 45, hjust = 1)
+         ))
+
 
 ggsave("figures/Figure3b.png", height=9, width=12)
 

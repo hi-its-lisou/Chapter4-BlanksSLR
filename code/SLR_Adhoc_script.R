@@ -9,6 +9,9 @@ solitary_bee_bacteria_all<- read.delim("data/adhoc_data.txt", header = TRUE, sep
   clean_names()
 print(solitary_bee_bacteria_all)
 
+#Load in function for standard error
+standard_error <- function(x) sd(x)/sqrt(length(x)) 
+
 # list the genera from the top 5 bacterial taxa of solitary bees
 genus_counts <- table(solitary_bee_bacteria_all$genera)
 genus_count_data <- data.frame(genera = names(genus_counts), Count = as.numeric(genus_counts))
@@ -41,7 +44,6 @@ top_genera
 #        "Escherichia", "Haemophilus", "Acinetobacter", 
 #        "Enhydrobacter", "Pseudomonas", "Stenotrophomonas", 
 #        "Xanthomonas")
-
 #removing Acinetobacter and Lactobacillus as potential contaminants
 
 vec<- c("Actinomyces", "Corynebacterium", "Arthrobacter", "Rothia", 
@@ -51,7 +53,7 @@ vec<- c("Actinomyces", "Corynebacterium", "Arthrobacter", "Rothia",
         "Pedobacter", "UnclassifiedTM7", "Bacillus", "Geobacillus", 
         "Brevibacillus", "Paenibacillus", "Staphylococcus", 
         "Abiotrophia", "Granulicatella", "Enterococcus", 
-     "Streptococcus", "Clostridium", 
+        "Streptococcus", "Clostridium", 
         "Coprococcus", "Anaerococcus", "Dialister", "Megasphaera", 
         "Veillonella", "Fusobacterium", "Leptotrichia", 
         "Brevundimonas", "Afipia", "Bradyrhizobium", "Devosia", 
@@ -76,21 +78,6 @@ solitary_bee_bacteria_all$contaminant <- ifelse(solitary_bee_bacteria_all$genera
 getcounts <- table(solitary_bee_bacteria_all$found_in_vector)
 getcounts #172 do not overlap and 71 overlap with common contaminants
 
-overlap_in_controlled_studies <- solitary_bee_bacteria_all %>%
-  group_by(bee_id) %>%
-  filter(controlled_for_contamination == "Yes") %>%
-  pull(contaminant)
-
-overlap_in_uncontrolled_studies <- solitary_bee_bacteria_all %>%
-  group_by(bee_id) %>%
-  filter(controlled_for_contamination == "No") %>%
-  pull(contaminant)
-
-# Perform the t-test
-t_test_result <- t.test(overlap_in_controlled_studies, overlap_in_uncontrolled_studies)
-
-print(t_test_result)
-
 #Create table with proportions and proportional_biomass of overlapping taxa per bee microbiome description (bee ID)
 proportion_contaminants_per_bee_id <- solitary_bee_bacteria_all %>%
   group_by(bee_id, controlled_for_contamination) %>%
@@ -105,38 +92,51 @@ proportion_contaminants_per_bee_id <- solitary_bee_bacteria_all %>%
   ungroup()
 print(proportion_contaminants_per_bee_id)
 
+#write_tsv(proportion_contaminants_per_bee_id, "proportion_contaminants_per_bee_id")
+
 # calculate the average proportion for overlapping taxa for controlled and uncontrolled studies per bee
 average_proportion_per_group <- proportion_contaminants_per_bee_id %>%
   group_by(controlled_for_contamination) %>%
-  summarise(average_proportion_contaminant = mean(proportion_contaminant))
+  summarise(
+    average_proportion_contaminant = mean(proportion_contaminant, na.rm = TRUE),
+    standard_error_proportion_contaminant = standard_error(proportion_contaminant)
+  )
 print(average_proportion_per_group)
+
 
 # calculate the average proportional_biomass of overlapping taxa for controlled and uncontrolled studies per bee
 average_contaminate_proportional_biomass_per_group <- proportion_contaminants_per_bee_id %>%
   group_by(controlled_for_contamination) %>%
-  summarise(average_contaminant_proportional_biomass = mean(contaminant_proportional_biomass))
+  summarise(
+    average_contaminant_proportional_biomass = mean(contaminant_proportional_biomass, na.rm = TRUE),
+    standard_error_contaminant_proportional_biomass = standard_error(contaminant_proportional_biomass)
+  )
 print(average_contaminate_proportional_biomass_per_group)
 
 
-
-##############################################################################################################################################################################################
-subsetted_df <- solitary_bee_bacteria_all %>%
- filter(proportional_biomass > 10)
-
-overlap_in_controlled_studies <- subsetted_df %>%
+# t-test for proportion of overlapping taxa 
+overlap_in_controlled_studies <- proportion_contaminants_per_bee_id %>%
   group_by(bee_id) %>%
   filter(controlled_for_contamination == "Yes") %>%
-  pull(contaminant)
+  pull(contaminant_proportional_biomass)
 
-overlap_in_uncontrolled_studies <- subsetted_df %>%
+overlap_in_uncontrolled_studies <- proportion_contaminants_per_bee_id %>%
   group_by(bee_id) %>%
   filter(controlled_for_contamination == "No") %>%
-  pull(contaminant)
+  pull(contaminant_proportional_biomass)
 
-# Perform the t-test
-t_test_result <- t.test(overlap_in_controlled_studies, overlap_in_uncontrolled_studies)
+shapiro.test(proportion_contaminants_per_bee_id$contaminant_proportional_biomass)
 
-print(t_test_result)
+#The data is not normally distributed, so going with a wilcox test
+mann_whitney_test_result <- wilcox.test(overlap_in_controlled_studies, overlap_in_uncontrolled_studies)
+#Not working?
+
+
+
+### Here I am experimenting with what happens when I only use the top genera that represent more than 10% of total biomass
+#As opposed to general top 5 reported.
+subsetted_df <- solitary_bee_bacteria_all %>%
+ filter(proportional_biomass > 10)
 
 #Create table with proportions and proportional_biomass of overlapping taxa per bee microbiome description (bee ID)
 proportion_contaminants_per_bee_id <- subsetted_df %>%
@@ -156,31 +156,17 @@ print(proportion_contaminants_per_bee_id)
 # calculate the average proportion for overlapping taxa for controlled and uncontrolled studies per bee
 average_proportion_per_group <- proportion_contaminants_per_bee_id %>%
   group_by(controlled_for_contamination) %>%
-  summarise(average_proportion_contaminant = mean(proportion_contaminant))
+  summarise(
+    average_proportion_contaminant = mean(proportion_contaminant, na.rm = TRUE),
+    standard_error_proportion_contaminant = standard_error(proportion_contaminant)
+  )
 print(average_proportion_per_group)
 
 # calculate the average proportional_biomass of overlapping taxa for controlled and uncontrolled studies per bee
 average_contaminate_proportional_biomass_per_group <- proportion_contaminants_per_bee_id %>%
   group_by(controlled_for_contamination) %>%
-  summarise(average_contaminant_proportional_biomass = mean(contaminant_proportional_biomass))
+  summarise(
+    average_contaminant_proportional_biomass = mean(contaminant_proportional_biomass, na.rm = TRUE),
+    standard_error_contaminant_proportional_biomass = standard_error(contaminant_proportional_biomass)
+  )
 print(average_contaminate_proportional_biomass_per_group)
-
-# t-test for proportion of overlapping taxa 
-overlap_in_controlled_studies <- proportion_contaminants_per_bee_id %>%
-  group_by(bee_id) %>%
-  filter(controlled_for_contamination == "Yes") %>%
-  pull(contaminant_proportional_biomass)
-
-overlap_in_uncontrolled_studies <- proportion_contaminants_per_bee_id %>%
-  group_by(bee_id) %>%
-  filter(controlled_for_contamination == "No") %>%
-  pull(contaminant_proportional_biomass)
-
-# Assess the distribution of the data
-shapiro.test(proportion_contaminants_per_bee_id$contaminant_proportional_biomass)
-
-#The data is not normally distributed, so going with a wilcox test
-mann_whitney_test_result <- wilcox.test(overlap_in_controlled_studies, overlap_in_uncontrolled_studies)
-#met with error: Warning message:
-In wilcox.test.default(overlap_in_controlled_studies, overlap_in_uncontrolled_studies) :
-  cannot compute exact p-value with ties

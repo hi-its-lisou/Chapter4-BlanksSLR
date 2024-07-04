@@ -1,85 +1,91 @@
+##############
+### Set up ###
+##############
+
 #load libraries
 library(janitor)
 library(ggplot2)
 library(tidyverse)
 library(dplyr)
 
-#Load the data
+#Load and clean the metadataset 
 SLR_DF <- read.delim("data/slr_metadata.txt", header = TRUE, sep = "\t") %>%
   clean_names()
 SLR_DF
 colnames(SLR_DF)
 
-################################################################################
+########################
+### Research subject ### 
+########################
+
 #Insect orders represented in the metadata
-unique(SLR_DF$insect_order)
 order_counts <- table(SLR_DF$insect_order)
 order_data <- data.frame(insect_order = names(order_counts), Count = as.numeric(order_counts))
+order_data <- order_data %>% mutate(Percentage = (Count / sum(Count)) * 100)
+order_data
+
+# Target microbial community of insect
+SLR_DF <- SLR_DF %>%
+  mutate(target_community_of_microbiome = if_else(
+    target_community_of_microbiome %in% c("Body", "Gut"), 
+    target_community_of_microbiome, 
+    "Other")) # Changing the labels of the target community, so that if it's not Body, Gut, it's 'Other'
+
+target_microbiome_data <- table(SLR_DF$target_community_of_microbiome)
+target_microbiome_data <- data.frame(target_community_of_microbiome = names(target_microbiome_data), Count = as.numeric(target_microbiome_data))
+target_microbiome_data <- target_microbiome_data %>% mutate(Percentage = (Count / sum(Count)) * 100)
+target_microbiome_data
 
 #Development stage used across the studies
-unique(SLR_DF$development_stage)
-Development_stage_counts <- table(SLR_DF$development_stage)
-Development_stage_data <- data.frame(development_stage = names(Development_stage_counts), Count = as.numeric(Development_stage_counts))
+Development_stage_data <- table(SLR_DF$development_stage)
+Development_stage_data <- data.frame(development_stage = names(Development_stage_data), Count = as.numeric(Development_stage_data))
+Development_stage_data <- Development_stage_data %>% mutate(Percentage = (Count / sum(Count)) * 100)
 Development_stage_data
 
-#How many papers used a surface sterilisation step
-Surface_sterilised_counts <- table(SLR_DF$surface_sterilized)
-Surface_sterilised_data <- data.frame(surface_sterilized = names(Surface_sterilised_counts), Count = as.numeric(Surface_sterilised_counts))
-Surface_sterilised_data
-(161/245)*100
+#Target region of the 16S rRNA gene
+region_V_data <- table(SLR_DF$x16s_r_rna_gene_target_region)
+region_V_data <- data.frame(x16s_r_rna_gene_target_region = names(region_V_data), Count = as.numeric(region_V_data))
+region_V_data <- region_V_data %>% mutate(Percentage = (Count / sum(Count)) * 100)
+region_V_data
+
+#################################
+### Specimen handling methods ### 
+#################################
 
 # The proportion of studies that sampled whole insects or dissected gut
-sampled_counts <- table(SLR_DF$sampled)
-Sampled_data <- data.frame(sampled = names(sampled_counts), Count = as.numeric(sampled_counts))
-Sampled_data
-(131/245)*100
-(95/245)*100
-((1+3+13+2)/245)*100
+unique(SLR_DF$sampled)
+SLR_DF <- SLR_DF %>%
+  mutate(sampled = if_else(
+    sampled %in% c("Gut", "Whole"), 
+    sampled, 
+    "Other"))
 
-#count for the types of methods used to control for contamination
-contam_control_how <- SLR_DF %>% summarise(count = n(), .by = c(how))
-contam_control_how
+sample_method_data <- table(SLR_DF$sampled)
+sample_method_data <- data.frame(sampled = names(sample_method_data), Count = as.numeric(sample_method_data))
+sample_method_data <- sample_method_data %>% mutate(Percentage = (Count / sum(Count)) * 100)
+sample_method_data
 
-################################################################################
-#Check the distribution of citation data with a histogram
-ggplot(SLR_DF, aes(x = is_referenced_by_count)) +
-  geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
-  labs(
-    title = "Distribution of Reference Counts",
-    x = "Reference Count",
-    y = "Frequency"
-  ) +
-  theme_classic() +
-  theme(
-    axis.title = element_text(size = 14),
-    axis.text = element_text(size = 12),
-    title = element_text(size = 16)
-  )                                     # Does not follow a normal distribution
+#How many papers used a surface sterilisation step
+Surface_sterilised_data <- table(SLR_DF$surface_sterilized)
+Surface_sterilised_data <- data.frame(surface_sterilized = names(Surface_sterilised_data), Count = as.numeric(Surface_sterilised_data))
+Surface_sterilised_data <- Surface_sterilised_data %>% mutate(Percentage = (Count / sum(Count)) * 100)
+Surface_sterilised_data
 
-# Mann-Whitney U test on whether use use negative controls and the number of references
-wilcox.test(is_referenced_by_count ~ did_they_use_negative_controls, data = SLR_DF)
-wilcox.test(is_referenced_by_count ~ was_there_a_comparison_with_their_samples_to_control_for_contamination=="Yes", data = SLR_DF)
+################################
+### Use of negative controls ### 
+################################
+negative_controls <- table(SLR_DF$did_they_use_negative_controls)
+negative_controls <- data.frame(did_they_use_negative_controls = names(negative_controls), Count = as.numeric(negative_controls))
+negative_controls <- negative_controls %>% mutate(Percentage = (Count / sum(Count)) * 100)
+negative_controls
 
-################################################################################
-#Get counts of publications per year
-SLR_DF %>%
-  group_by(year) %>%
-  summarise(publications = n()) %>%
-  ggplot(aes(x = year, y = publications, group = 1)) +
-  geom_line() +
-  geom_point() +
-  theme_minimal()+
-  stat_smooth(method = "lm", se = FALSE, formula = y ~ x, color = "blue") +
-  geom_text(aes(x = max(year), y = max(publications), 
-                label = sprintf("R^2 = %.2f, p = %.3f", 
-                                cor(year, publications)^2, 
-                                summary(lm(publications ~ year))$coefficients[8])),
-            hjust = 1, vjust = 1, color = "blue")
+controlled_contam <- table(SLR_DF$was_there_a_comparison_with_their_samples_to_control_for_contamination)
+controlled_contam <- data.frame(was_there_a_comparison_with_their_samples_to_control_for_contamination = names(controlled_contam), Count = as.numeric(controlled_contam))
+controlled_contam <- controlled_contam %>% mutate(Percentage = (Count / sum(Count)) * 100)
+controlled_contam
 
-################################################################################
-### Figure 3 - Part A ###
-# Modified from Welsh & Eisenhofer (2024) The prevalence of controls in phyllosphere microbiome research: a methodological review.
-#https://github.com/brady-welsh/2023_Controls_MR/blob/main/code/Figure_5.md
+### Figure 3 - Part A
+# Modified from Welsh & Eisenhofer (2024) The prevalence of controls in phyllosphere microbiome research: a methodological review. https://github.com/brady-welsh/2023_Controls_MR/blob/main/code/Figure_5.md
 
 #Colour scheme 
 colscheme <- c("Controlled contamination" = "355E3B", "Negative controls" = "111111")
@@ -148,16 +154,14 @@ n_Publications$dummy <- "Number of Publications"
   ) +
   labs(x = "Year", y = "Percentage of studies"))
 
-ggsave("figures/Figure3a.png", height=6, width=9)
+#ggsave("figures/Figure3a.png", height=6, width=9)
 
-################################################################################
-### Figure 3 - Part B ###
+### Figure 3 - Part B
 #new dataframe to split negative control use further according to year
 summary_df <- SLR_DF %>%
   count(year, did_they_use_negative_controls,
         contamination_Control = was_there_a_comparison_with_their_samples_to_control_for_contamination) %>%
   arrange(year)
-
 
 # Create an interaction variable by combining control variables into a single string
 summary_df$interaction_level <- paste(
@@ -199,31 +203,80 @@ summary_df$interaction_level <- factor(
     )) +
   theme (legend.title = element_blank(),
          legend.text = element_text(size = 12),
-         legend.position = "right", 
+         legend.position = "bottom", 
          axis.title = element_text(size = 14),
          axis.text = element_text(size = 14),
          axis.text.x = element_text(angle = 45, hjust = 1)
          ))
 
+#ggsave("figures/Figure3b.png", height=9, width=12)
 
-ggsave("figures/Figure3b.png", height=9, width=12)
+#Plot the number of publications per year to obtain p value
+SLR_DF %>%
+  group_by(year) %>%
+  summarise(publications = n()) %>%
+  ggplot(aes(x = year, y = publications, group = 1)) +
+  geom_line() +
+  geom_point() +
+  theme_minimal()+
+  stat_smooth(method = "lm", se = FALSE, formula = y ~ x, color = "blue") +
+  geom_text(aes(x = max(year), y = max(publications), 
+                label = sprintf("R^2 = %.2f, p = %.3f", 
+                                cor(year, publications)^2, 
+                                summary(lm(publications ~ year))$coefficients[8])),
+            hjust = 1, vjust = 1, color = "blue")
 
-################################################################################
-# Proportion of studies that acknowledge relic DNA
-acks1 <- table(SLR_DF$relic_dna)
-acks_data1 <- data.frame(relic_dna = names(acks1), Count = as.numeric(acks1))
-acks_data1
-(8/245)*100
+#Check the distribution of citation data with a histogram
+ggplot(SLR_DF, aes(x = is_referenced_by_count)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Distribution of Reference Counts",
+    x = "Reference Count",
+    y = "Frequency"
+  ) +
+  theme_classic() +
+  theme(
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    title = element_text(size = 16)
+  )# Does not follow a normal distribution
+
+# Mann-Whitney U test on whether use use negative controls and the number of references
+wilcox.test(is_referenced_by_count ~ did_they_use_negative_controls, data = SLR_DF)
+wilcox.test(is_referenced_by_count ~ was_there_a_comparison_with_their_samples_to_control_for_contamination=="Yes", data = SLR_DF)
+
+##########################
+### Limit of detection ### 
+##########################
+
+SLR_DF <- SLR_DF %>%
+  mutate(do_they_determine_the_limit_of_detection = if_else(
+    do_they_determine_the_limit_of_detection %in% c("Yes"), 
+    do_they_determine_the_limit_of_detection, 
+    "No")) #Needed to merge NAs with No
+
+LoD_data <- table(SLR_DF$do_they_determine_the_limit_of_detection)
+LoD_data <- data.frame(do_they_determine_the_limit_of_detection = names(LoD_data), Count = as.numeric(LoD_data))
+LoD_data <- LoD_data %>% mutate(Percentage = (Count / sum(Count)) * 100)
+LoD_data
+
+#########################################################################
+### Acknowledging alternative, non-symbiotic sources of microbial DNA ### 
+#########################################################################
+# Proportion of studies that acknowledge mitochondria or chloroplasts
+acks_mito_chloro <- table(SLR_DF$animal_plant_dna)
+acks_mito_chloro <- data.frame(animal_plant_dna = names(acks_mito_chloro), Count = as.numeric(acks_mito_chloro))
+acks_mito_chloro <- acks_mito_chloro %>% mutate(Percentage = (Count / sum(Count)) * 100)
+acks_mito_chloro
 
 # Proportion of studies that acknowledge transient bacteria
-acks2 <- table(SLR_DF$transient_bacteria)
-acks_data2 <- data.frame(transient_bacteria = names(acks2), Count = as.numeric(acks2))
-acks_data2
-(50/245)*100
+ack_transient <- table(SLR_DF$transient_bacteria)
+ack_transient <- data.frame(transient_bacteria = names(ack_transient), Count = as.numeric(ack_transient))
+ack_transient <- ack_transient %>% mutate(Percentage = (Count / sum(Count)) * 100)
+ack_transient
 
-# Proportion of studies that acknowledge mitochondria or chloroplasts
-acks3 <- table(SLR_DF$animal_plant_dna)
-acks_data3 <- data.frame(animal_plant_dna = names(acks3), Count = as.numeric(acks3))
-acks_data3
-(85/245)*100
-
+# Proportion of studies that acknowledge relic DNA
+ack_relic <- table(SLR_DF$relic_dna)
+ack_relic <- data.frame(relic_dna = names(ack_relic), Count = as.numeric(ack_relic))
+ack_relic <- ack_relic %>% mutate(Percentage = (Count / sum(Count)) * 100)
+ack_relic

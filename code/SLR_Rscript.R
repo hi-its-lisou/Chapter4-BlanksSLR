@@ -88,7 +88,7 @@ controlled_contam
 # Modified from Welsh & Eisenhofer (2024) The prevalence of controls in phyllosphere microbiome research: a methodological review. https://github.com/brady-welsh/2023_Controls_MR/blob/main/code/Figure_5.md
 
 #Colour scheme 
-colscheme <- c("Controlled contamination" = "355E3B", "Negative controls" = "111111")
+colscheme <- c("Controlled contamination" = "355E3B", "Negative controls" = "#014D72")
 
 # Counts of Publications per year
 n_Publications <- SLR_DF %>%
@@ -125,12 +125,7 @@ n_Publications$dummy <- "Number of Publications"
                                            group = was_there_a_comparison_with_their_samples_to_control_for_contamination,
                                            colour = "Controlled contamination"),
             linewidth = 2) +
-  geom_point(data = controlcontam_prop, aes(x = as.factor(year), y = proportion * 100,
-                                            group = was_there_a_comparison_with_their_samples_to_control_for_contamination,
-                                            colour = "Controlled contamination"),
-             size = 4) +
-  geom_line(data = n_Publications, 
-            aes(x = as.factor(year), y = publications, group = dummy, colour = dummy, linetype = dummy), 
+geom_line(data = n_Publications, aes(x = as.factor(year), y = publications, group = dummy, colour = dummy, linetype = dummy), 
             linewidth = 1,
             linetype = "dashed") +
   scale_y_continuous(
@@ -140,7 +135,7 @@ n_Publications$dummy <- "Number of Publications"
   ) +
   scale_color_manual(values = c(colscheme, "Number of Publications" = "grey")) +
   scale_linetype_manual(values = c("Number of Publications" = "dashed", "Negative controls" = "solid", "Controlled contamination" = "solid")) +
-  theme_classic() +
+ theme_bw() +
   theme(legend.title = element_blank(),
         legend.text = element_text(size = 12),
         legend.position = "bottom",
@@ -197,10 +192,11 @@ summary_df$interaction_level <- factor(
   ) +
   scale_fill_manual(
     values = c(
-      "No Negative Controls" = "blue",
-      "Used negative controls, but did not control for contamination" = "111111",
+      "No Negative Controls" = "#6B1818",
+      "Used negative controls, but did not control for contamination" = "#014D72",
       "Used negative controls and controlled for contamination" = "355E3B"
     )) +
+ theme_bw() +
   theme (legend.title = element_blank(),
          legend.text = element_text(size = 12),
          legend.position = "bottom", 
@@ -209,7 +205,7 @@ summary_df$interaction_level <- factor(
          axis.text.x = element_text(angle = 45, hjust = 1)
          ))
 
-#ggsave("figures/Figure3b.png", height=9, width=12)
+#ggsave("figures/Figure3b.png", height=6, width=9)
 
 #Plot the number of publications per year to obtain p value
 SLR_DF %>%

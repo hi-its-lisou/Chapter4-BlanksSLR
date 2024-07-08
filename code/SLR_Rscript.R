@@ -88,7 +88,7 @@ controlled_contam
 # Modified from Welsh & Eisenhofer (2024) The prevalence of controls in phyllosphere microbiome research: a methodological review. https://github.com/brady-welsh/2023_Controls_MR/blob/main/code/Figure_5.md
 
 #Colour scheme 
-colscheme <- c("Controlled contamination" = "355E3B", "Negative controls" = "#014D72")
+colscheme <- c("Controlled for contamination using blanks" = "355E3B", "Used blanks, but did not control contamination" = "#014D72")
 
 # Counts of Publications per year
 n_Publications <- SLR_DF %>%
@@ -96,45 +96,69 @@ n_Publications <- SLR_DF %>%
   summarise(publications = n()) 
 n_Publications
 
-#count of Publications that used negative controls grouped by year
+####
+# Dataframe for the number of studies that use negative controls each year (but did not control for contam)
 neg_prop <- SLR_DF %>%
-  summarise(count = n(), .by = c(year, did_they_use_negative_controls)) %>%
+  mutate(n_yes = ifelse(did_they_use_negative_controls == "Yes", 1, 0)) %>%
   group_by(year) %>%
-  mutate(proportion = count / sum(count)) %>%
-  filter(did_they_use_negative_controls == "Yes")
+  summarise(n_studies = length(year),
+            n_yes = sum(n_yes),
+            .groups = "drop") %>% 
+  rowwise() %>%
+  mutate(proportion = n_yes / n_studies,
+         did_they_use_negative_controls = "Yes")
 
-#counts of Publications that used sequenced blanks to control for contamination
+# Dataframe for the number of studies that use negative controls to control contamination each year
 controlcontam_prop <- SLR_DF %>%
-  summarise(count = n(), .by = c(year, was_there_a_comparison_with_their_samples_to_control_for_contamination)) %>%
+  mutate(n_yes = ifelse(was_there_a_comparison_with_their_samples_to_control_for_contamination == "Yes", 1, 0)) %>%
   group_by(year) %>%
-  mutate(proportion = count / sum(count)) %>%
-  filter(was_there_a_comparison_with_their_samples_to_control_for_contamination == "Yes")
+  summarise(n_studies = length(year),
+            n_yes = sum(n_yes, na.rm = TRUE),
+            .groups = "drop") %>% 
+  rowwise() %>%
+  mutate(proportion = n_yes / n_studies,
+         was_there_a_comparison_with_their_samples_to_control_for_contamination = "Yes")
 
 # Add a factor level for "Number of Publications" in the control for contamination column for the legend
-neg_prop$dummy <- "Negative controls"
-controlcontam_prop$dummy <- "Controlled contamination"
+neg_prop$dummy <- "Used blanks, but did not control contamination"
+controlcontam_prop$dummy <- "Controlled for contamination using blanks"
 n_Publications$dummy <- "Number of Publications"
 
 #Plot it
 (neg_prop %>%
   ggplot(aes(x = as.factor(year), y = proportion * 100, 
              group = did_they_use_negative_controls,
-             colour = "Negative controls")) +
-  geom_line(linewidth = 2) +
-  geom_line(data = controlcontam_prop, aes(x = as.factor(year), y = proportion * 100,
-                                           group = was_there_a_comparison_with_their_samples_to_control_for_contamination,
-                                           colour = "Controlled contamination"),
-            linewidth = 2) +
-geom_line(data = n_Publications, aes(x = as.factor(year), y = publications, group = dummy, colour = dummy, linetype = dummy), 
-            linewidth = 1,
-            linetype = "dashed") +
-  scale_y_continuous(
+             colour = "Used blanks, but did not control contamination")) +
+   geom_line(linewidth = 2) +
+   geom_line(
+     data = controlcontam_prop, 
+     aes(x = as.factor(year), 
+         y = proportion * 100,
+         group = was_there_a_comparison_with_their_samples_to_control_for_contamination,
+         colour = "Controlled for contamination using blanks"),
+     linewidth = 2,
+     position = position_jitterdodge(0.25)) +
+   geom_line(
+     data = n_Publications, 
+     aes(x = as.factor(year), 
+         y = publications, 
+         group = dummy, colour = dummy, linetype = dummy),
+     linewidth = 1,
+     linetype = "dashed"
+     ) +
+   scale_y_continuous(
     name = "Percentage of studies",
     sec.axis = sec_axis(~ ., name = "Number of Publications"),
     labels = scales::label_percent(scale = 1)
-  ) +
-  scale_color_manual(values = c(colscheme, "Number of Publications" = "grey")) +
-  scale_linetype_manual(values = c("Number of Publications" = "dashed", "Negative controls" = "solid", "Controlled contamination" = "solid")) +
+    ) +
+  scale_color_manual(
+    values = c(colscheme, "Number of Publications" = "grey")
+    ) +
+  scale_linetype_manual(
+    values = c("Number of Publications" = "dashed", 
+               "Used blanks, but did not control contamination" = "solid", 
+               "Controlled for contamination using blanks" = "solid")
+    ) +
  theme_bw() +
   theme(legend.title = element_blank(),
         legend.text = element_text(size = 12),
@@ -149,7 +173,7 @@ geom_line(data = n_Publications, aes(x = as.factor(year), y = publications, grou
   ) +
   labs(x = "Year", y = "Percentage of studies"))
 
-#ggsave("figures/Figure3a.png", height=6, width=9)
+ggsave("figures/Figure3a.png", height=6, width=9)
 
 ### Figure 3 - Part B
 #new dataframe to split negative control use further according to year
@@ -170,9 +194,9 @@ interaction_levels <- c( "No.NA",
                          "Yes.No",
                          "Yes.Yes")
 # Defning the labels for the interactions
-interaction_labels <- c("No Negative Controls",
-                        "Used negative controls, but did not control for contamination",
-                        "Used negative controls and controlled for contamination")
+interaction_labels <- c("Did not report using a negative control",
+                        "Used blanks, but did not control contamination",
+                        "Controlled for contamination using blanks")
 
 # Convert the interaction variable to factor with the specific levels and labels
 summary_df$interaction_level <- factor(
@@ -192,9 +216,9 @@ summary_df$interaction_level <- factor(
   ) +
   scale_fill_manual(
     values = c(
-      "No Negative Controls" = "#6B1818",
-      "Used negative controls, but did not control for contamination" = "#014D72",
-      "Used negative controls and controlled for contamination" = "355E3B"
+      "Did not report using a negative control" = "#6B1818",
+      "Used blanks, but did not control contamination" = "#014D72",
+      "Controlled for contamination using blanks" = "355E3B"
     )) +
  theme_bw() +
   theme (legend.title = element_blank(),
@@ -205,7 +229,7 @@ summary_df$interaction_level <- factor(
          axis.text.x = element_text(angle = 45, hjust = 1)
          ))
 
-#ggsave("figures/Figure3b.png", height=6, width=9)
+ggsave("figures/Figure3b.png", height=6, width=9)
 
 #Plot the number of publications per year to obtain p value
 SLR_DF %>%

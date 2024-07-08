@@ -50,17 +50,17 @@ vec<- c("Actinomyces", "Corynebacterium", "Arthrobacter", "Rothia",
 
 ### Add a new column with vector
 # 1) whether the bacteria taxa is "found_in_vector" with values "Yes" or "No"
-solitary_bee_bacteria_uncontrolled$found_in_vector <- ifelse(solitary_bee_bacteria_uncontrolled$genera %in% vec, "Yes", "No")
+solitary_bee_bacteria_all$found_in_vector <- ifelse(solitary_bee_bacteria_all$genera %in% vec, "Yes", "No")
 # 2) whether it is a contaminant (1 if found in vector, 0 otherwise)
-solitary_bee_bacteria_uncontrolled$contaminant <- ifelse(solitary_bee_bacteria_uncontrolled$genera %in% vec, 1, 0)
+solitary_bee_bacteria_all$contaminant <- ifelse(solitary_bee_bacteria_all$genera %in% vec, 1, 0)
 #write.table(solitary_bee_bacteria_uncontrolled,"solitary_bee_bacteria_uncontrolled.txt",sep= "\t",row.names=FALSE)
-getcounts <- table(solitary_bee_bacteria_uncontrolled$found_in_vector)
+getcounts <- table(solitary_bee_bacteria_all$found_in_vector)
 getcounts #172 do not overlap and 71 overlap with common contaminants
 
-#write_tsv(solitary_bee_bacteria_uncontrolled, "solitary_bee_bacteria_uncontrolled.tsv")
+write_tsv(solitary_bee_bacteria_all, "solitary_bee_bacteria_all.tsv")
 
 #Create table with proportions and proportional_biomass of overlapping taxa per bee microbiome description (bee ID)
-proportion_contaminants_per_bee_id <- solitary_bee_bacteria_uncontrolled %>%
+proportion_contaminants_per_bee_id <- solitary_bee_bacteria_all %>%
   group_by(bee_id, controlled_for_contamination) %>%
   summarise(
     total_genera = n(),
@@ -73,7 +73,7 @@ proportion_contaminants_per_bee_id <- solitary_bee_bacteria_uncontrolled %>%
   ungroup()
 print(proportion_contaminants_per_bee_id)
 
-#write_tsv(proportion_contaminants_per_bee_id, "proportion_contaminants_per_bee_id")
+write_tsv(proportion_contaminants_per_bee_id, "proportion_contaminants_per_bee_id.tsv")
 
 # calculate the average proportion for overlapping taxa for controlled and uncontrolled studies per bee
 average_proportion_per_group <- proportion_contaminants_per_bee_id %>%

@@ -232,11 +232,11 @@ McFrederick	2012	17	52	Megalopta 	genalis	Genus_2	Pseudomonas	27.3	Yes	No
 McFrederick	2012	17	52	Megalopta 	genalis	Genus_4	Ralstonia	3.6	Yes	No
 McFrederick	2012	17	52	Megalopta 	genalis	Genus_1	Stenotrophomonas	38.3	Yes	No
 McFrederick	2012	17	52	Megalopta 	genalis	Genus_5	Enterobacter	3.1	Yes	No
-McFrederick	2012	17	53	Augochlora	pura	Genus_1	Wolbachia	95.5	Yes	No
-McFrederick	2012	17	53	Augochlora	pura	Genus_2	Acidobacteriaceae	40.2	Yes	No
-McFrederick	2012	17	53	Augochlora	pura	Genus_3	Clostridiales	13.3	Yes	No
-McFrederick	2012	17	53	Augochlora	pura	Genus_4	Rubrobacterales	11.8	Yes	No
-McFrederick	2012	17	53	Augochlora	pura	Genus_5	Acidobacterium	11.5	Yes	No
+McFrederick	2012	17	53	Augochlora	pura	Genus_1	Wolbachia	31.8	Yes	No
+McFrederick	2012	17	53	Augochlora	pura	Genus_2	Acidobacteriaceae	13.4	Yes	No
+McFrederick	2012	17	53	Augochlora	pura	Genus_3	Clostridiales	4.4	Yes	No
+McFrederick	2012	17	53	Augochlora	pura	Genus_4	Rubrobacterales	3.9	Yes	No
+McFrederick	2012	17	53	Augochlora	pura	Genus_5	Acidobacterium	3.8	Yes	No
 McFrederick	2012	17	54	Halictus	ligatus	Genus_1	Lactobacillales	47.8	Yes	No
 McFrederick	2012	17	54	Halictus	ligatus	Genus_2	Lactobacillaceae	24.6	Yes	No
 McFrederick	2012	17	54	Halictus	ligatus	Genus_3	Firmicutes	13.7	Yes	No

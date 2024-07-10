@@ -9,9 +9,6 @@ solitary_bee_bacteria_all<- read.delim("data/adhoc_data.txt", header = TRUE, sep
   clean_names()
 print(solitary_bee_bacteria_all)
 
-solitary_bee_bacteria_uncontrolled <- solitary_bee_bacteria_all %>%
-  filter(controlled_for_contamination == "No")
-
 #Load in function for standard error
 standard_error <- function(x) sd(x)/sqrt(length(x)) 
 
@@ -24,7 +21,6 @@ top_genera <- head(genus_count_data[order(-genus_count_data$Count), ], 10)
 top_genera
 
 #Create a vector for common contaminants taken from Eisenhofer et al. 2019
-
 vec<- c("Actinomyces", "Corynebacterium", "Arthrobacter", "Rothia", 
         "Propionibacterium", "Atopobium", "Sediminibacterium", 
         "Porphyromonas", "Prevotella", "Chryseobacterium", 
@@ -93,3 +89,166 @@ average_contaminate_proportional_biomass_per_group <- proportion_contaminants_pe
     standard_error_contaminant_proportional_biomass = standard_error(contaminant_proportional_biomass)
   )
 print(average_contaminate_proportional_biomass_per_group)
+
+
+
+
+
+
+#Load and clean the metadataset 
+setwd("F:/PhD/SLR/R")
+DF <- read.delim("all_taxa.txt", header = TRUE, sep = "\t") %>%
+  clean_names()
+
+vec<- c("Actinomyces", "Corynebacterium", "Arthrobacter", "Rothia", 
+        "Propionibacterium", "Atopobium", "Sediminibacterium", 
+        "Porphyromonas", "Prevotella", "Chryseobacterium", 
+        "Capnocytophaga", "Chryseobacterium", "Flavobacterium", 
+        "Pedobacter", "UnclassifiedTM7", "Bacillus", "Geobacillus", 
+        "Brevibacillus", "Paenibacillus", "Staphylococcus", 
+        "Abiotrophia", "Granulicatella", "Enterococcus", 
+        "Lactobacillus", "Streptococcus", "Clostridium", 
+        "Coprococcus", "Anaerococcus", "Dialister", "Megasphaera", 
+        "Veillonella", "Fusobacterium", "Leptotrichia", 
+        "Brevundimonas", "Afipia", "Bradyrhizobium", "Devosia", 
+        "Methylobacterium", "Mesorhizobium", "Phyllobacterium", 
+        "Rhizobium", "Methylobacterium", "Phyllobacterium", 
+        "Roseomonas", "Novosphingobium", "Sphingobium", 
+        "Sphingomonas", "Achromobacter", "Burkholderia", 
+        "Acidovorax", "Comamonas", "Curvibacter", "Pelomonas",
+        "Cupriavidus", "Duganella", "Herbaspirillum", 
+        "Janthinobacterium", "Massilia", "Oxalobacter", 
+        "Ralstonia", "Leptothrix", "kingella", "Neisseria", 
+        "Escherichia", "Haemophilus", "Acinetobacter", 
+        "Enhydrobacter", "Pseudomonas", "Stenotrophomonas", 
+        "Xanthomonas")
+
+### Add a new column with vector
+# 1) whether the bacteria taxa is "found_in_vector" with values "Yes" or "No"
+DF$found_in_vector <- ifelse(DF$genus %in% vec, "Yes", "No")
+# 2) whether it is a contaminant (1 if found in vector, 0 otherwise)
+DF$contaminant <- ifelse(DF$genus %in% vec, 1, 0)
+#getcounts <- table(DF$found_in_vector)
+#getcounts 
+
+#Create table with proportions and proportional_biomass of overlapping taxa per bee microbiome description (bee ID)
+proportion_contaminants_per_bee_id <- DF %>%
+  group_by(bee_id, controlled_for_contamination) %>%
+  summarise(
+    total_genus = n(),
+    contaminant_genera = sum(contaminant),
+    proportion_contaminant = mean(contaminant),
+    total_average_relative_abundance = sum(average_relative_abundance),
+    contaminant_average_relative_abundance = sum(average_relative_abundance * contaminant),
+    ) %>%
+  ungroup()
+print(proportion_contaminants_per_bee_id)
+
+# calculate the average proportional_biomass of overlapping taxa for controlled and uncontrolled studies per bee
+average_contaminate_biomass_per_group <- proportion_contaminants_per_bee_id %>%
+  group_by(controlled_for_contamination) %>%
+  summarise(average_contaminant_proportional_biomass = mean(contaminant_average_relative_abundance))
+print(average_contaminate_biomass_per_group)
+
+shapiro.test(proportion_contaminants_per_bee_id$contaminant_average_relative_abundance)
+# Perform the Wilcoxon rank-sum test
+wilcox_test <- wilcox.test(contaminant_average_relative_abundance ~ controlled_for_contamination, 
+                           data = proportion_contaminants_per_bee_id)
+# Print the result of the Wilcoxon rank-sum test
+print(wilcox_test)
+
+# Create the box and whisker plot
+ggplot(proportion_contaminants_per_bee_id, aes(x = controlled_for_contamination, y = contaminant_average_relative_abundance)) +
+  geom_boxplot(fill = "lightblue", color = "black", outlier.shape = 8, outlier.size = 1.5) +
+  geom_jitter(width = 0.2, color = "red", alpha = 0.5) +
+  labs(
+    title = "Contaminant Average Relative Abundance by Contamination Control",
+    x = "Controlled for Contamination",
+    y = "Contaminant Average Relative Abundance"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10)
+  )
+
+# Remove the three bees that are outliers
+# Outliers because they are mostly Acinetobacter - a common nectar associate
+DF <- read.delim("all_taxa.txt", header = TRUE, sep = "\t") %>%
+  clean_names() %>%
+  filter(!bee_id %in% c("16", "30", "37"))
+
+vec<- c("Actinomyces", "Corynebacterium", "Arthrobacter", "Rothia", 
+        "Propionibacterium", "Atopobium", "Sediminibacterium", 
+        "Porphyromonas", "Prevotella", "Chryseobacterium", 
+        "Capnocytophaga", "Chryseobacterium", "Flavobacterium", 
+        "Pedobacter", "UnclassifiedTM7", "Bacillus", "Geobacillus", 
+        "Brevibacillus", "Paenibacillus", "Staphylococcus", 
+        "Abiotrophia", "Granulicatella", "Enterococcus", 
+        "Lactobacillus", "Streptococcus", "Clostridium", 
+        "Coprococcus", "Anaerococcus", "Dialister", "Megasphaera", 
+        "Veillonella", "Fusobacterium", "Leptotrichia", 
+        "Brevundimonas", "Afipia", "Bradyrhizobium", "Devosia", 
+        "Methylobacterium", "Mesorhizobium", "Phyllobacterium", 
+        "Rhizobium", "Methylobacterium", "Phyllobacterium", 
+        "Roseomonas", "Novosphingobium", "Sphingobium", 
+        "Sphingomonas", "Achromobacter", "Burkholderia", 
+        "Acidovorax", "Comamonas", "Curvibacter", "Pelomonas",
+        "Cupriavidus", "Duganella", "Herbaspirillum", 
+        "Janthinobacterium", "Massilia", "Oxalobacter", 
+        "Ralstonia", "Leptothrix", "kingella", "Neisseria", 
+        "Escherichia", "Haemophilus", "Acinetobacter", 
+        "Enhydrobacter", "Pseudomonas", "Stenotrophomonas", 
+        "Xanthomonas")
+
+### Add a new column with vector
+# 1) whether the bacteria taxa is "found_in_vector" with values "Yes" or "No"
+DF$found_in_vector <- ifelse(DF$genus %in% vec, "Yes", "No")
+# 2) whether it is a contaminant (1 if found in vector, 0 otherwise)
+DF$contaminant <- ifelse(DF$genus %in% vec, 1, 0)
+
+#getcounts <- table(DF$found_in_vector)
+#getcounts #172 do not overlap and 71 overlap with common contaminants
+
+
+
+#Create table with proportions and proportional_biomass of overlapping taxa per bee microbiome description (bee ID)
+proportion_contaminants_per_bee_id <- DF %>%
+  group_by(bee_id, controlled_for_contamination) %>%
+  summarise(
+    total_genus = n(),
+    contaminant_genera = sum(contaminant),
+    proportion_contaminant = mean(contaminant),
+    total_average_relative_abundance = sum(average_relative_abundance),
+    contaminant_average_relative_abundance = sum(average_relative_abundance * contaminant),
+  ) %>%
+  ungroup()
+print(proportion_contaminants_per_bee_id)
+
+
+# calculate the average proportional_biomass of overlapping taxa for controlled and uncontrolled studies per bee
+average_contaminate_biomass_per_group <- proportion_contaminants_per_bee_id %>%
+  group_by(controlled_for_contamination) %>%
+  summarise(average_contaminant_proportional_biomass = mean(contaminant_average_relative_abundance))
+print(average_contaminate_biomass_per_group)
+
+shapiro.test(proportion_contaminants_per_bee_id$contaminant_average_relative_abundance)
+t.test(proportion_contaminants_per_bee_id$contaminant_average_relative_abundance)
+#do an ANOVA
+
+# Create the box and whisker plot
+ggplot(proportion_contaminants_per_bee_id, aes(x = controlled_for_contamination, y = contaminant_average_relative_abundance)) +
+  geom_boxplot(fill = "lightblue", color = "black", outlier.shape = 8, outlier.size = 1.5) +
+  geom_jitter(width = 0.2, color = "red", alpha = 0.5) +
+  labs(
+    title = "Contaminant Average Relative Abundance by Contamination Control",
+    x = "Controlled for Contamination",
+    y = "Contaminant Average Relative Abundance"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10)
+  )

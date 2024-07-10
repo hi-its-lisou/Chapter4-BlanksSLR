@@ -107,7 +107,7 @@ ggplot(overlap_per_bee_id,
 # Remove the three bees that are outliers
 DF <- read.delim("data/adhoc_data.txt", header = TRUE, sep = "\t") %>%
   clean_names() %>%
-  filter(!bee_id %in% c("16", "30", "37"))
+  filter(!bee_id %in% c("1", "30", "27"))
 
 vec<- c("Actinomyces", "Corynebacterium", "Arthrobacter", "Rothia", 
         "Propionibacterium", "Atopobium", "Sediminibacterium", 

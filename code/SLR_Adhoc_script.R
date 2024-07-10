@@ -5,20 +5,19 @@ library(tidyverse)
 library(dplyr)
 
 #import the data
-solitary_bee_bacteria_all<- read.delim("data/adhoc_data.txt", header = TRUE, sep = "\t") %>%
+df<- read.delim("data/adhoc_data.txt", header = TRUE, sep = "\t") %>%
   clean_names()
-print(solitary_bee_bacteria_all)
 
 #Load in function for standard error
 standard_error <- function(x) sd(x)/sqrt(length(x)) 
 
-# list the genera from the top 5 bacterial taxa of solitary bees
-genus_counts <- table(solitary_bee_bacteria_uncontrolled$genera)
-genus_count_data <- data.frame(genera = names(genus_counts), Count = as.numeric(genus_counts))
+# list the genus from the top 5 bacterial taxa of solitary bees
+genus_counts <- table(df$genus)
+genus_count_data <- data.frame(genus = names(genus_counts), Count = as.numeric(genus_counts))
 genus_count_data
-# Obtain top 10 reported genera
-top_genera <- head(genus_count_data[order(-genus_count_data$Count), ], 10)
-top_genera
+# Obtain top 10 reported genus
+top_genus <- head(genus_count_data[order(-genus_count_data$Count), ], 10)
+top_genus
 
 #Create a vector for common contaminants taken from Eisenhofer et al. 2019
 vec<- c("Actinomyces", "Corynebacterium", "Arthrobacter", "Rothia", 
@@ -46,136 +45,68 @@ vec<- c("Actinomyces", "Corynebacterium", "Arthrobacter", "Rothia",
 
 ### Add a new column with vector
 # 1) whether the bacteria taxa is "found_in_vector" with values "Yes" or "No"
-solitary_bee_bacteria_all$found_in_vector <- ifelse(solitary_bee_bacteria_all$genera %in% vec, "Yes", "No")
+df$found_in_vector <- ifelse(df$genus %in% vec, "Yes", "No")
 # 2) whether it is a contaminant (1 if found in vector, 0 otherwise)
-solitary_bee_bacteria_all$contaminant <- ifelse(solitary_bee_bacteria_all$genera %in% vec, 1, 0)
-#write.table(solitary_bee_bacteria_uncontrolled,"solitary_bee_bacteria_uncontrolled.txt",sep= "\t",row.names=FALSE)
-getcounts <- table(solitary_bee_bacteria_all$found_in_vector)
-getcounts #172 do not overlap and 71 overlap with common contaminants
-
-write_tsv(solitary_bee_bacteria_all, "solitary_bee_bacteria_all.tsv")
+df$contaminant <- ifelse(df$genus %in% vec, 1, 0)
+#write.table(df,"df.txt",sep= "\t",row.names=FALSE)
+getcounts <- table(df$found_in_vector)
+getcounts #2377 do not overlap and 559 overlap with common contaminants
 
 #Create table with proportions and proportional_biomass of overlapping taxa per bee microbiome description (bee ID)
-proportion_contaminants_per_bee_id <- solitary_bee_bacteria_all %>%
-  group_by(bee_id, controlled_for_contamination) %>%
-  summarise(
-    total_genera = n(),
-    contaminant_genera = sum(contaminant),
-    proportion_contaminant = mean(contaminant),
-    total_proportional_biomass_of_top_genera = sum(proportional_biomass),
-    contaminant_proportional_biomass = sum(proportional_biomass * contaminant),
-    proportion_proportional_biomass_contaminant = sum(proportional_biomass * contaminant) / sum(proportional_biomass) * 100
-    ) %>%
-  ungroup()
-print(proportion_contaminants_per_bee_id)
-
-write_tsv(proportion_contaminants_per_bee_id, "proportion_contaminants_per_bee_id.tsv")
-
-# calculate the average proportion for overlapping taxa for controlled and uncontrolled studies per bee
-average_proportion_per_group <- proportion_contaminants_per_bee_id %>%
-  group_by(controlled_for_contamination) %>%
-  summarise(
-    average_proportion_contaminant = mean(proportion_contaminant, na.rm = TRUE),
-    standard_error_proportion_contaminant = standard_error(proportion_contaminant)
-  )
-print(average_proportion_per_group)
-
-
-# calculate the average proportional_biomass of overlapping taxa for controlled and uncontrolled studies per bee
-average_contaminate_proportional_biomass_per_group <- proportion_contaminants_per_bee_id %>%
-  group_by(controlled_for_contamination) %>%
-  summarise(
-    average_contaminant_proportional_biomass = mean(contaminant_proportional_biomass, na.rm = TRUE),
-    standard_error_contaminant_proportional_biomass = standard_error(contaminant_proportional_biomass)
-  )
-print(average_contaminate_proportional_biomass_per_group)
-
-
-
-
-
-
-#Load and clean the metadataset 
-setwd("F:/PhD/SLR/R")
-DF <- read.delim("all_taxa.txt", header = TRUE, sep = "\t") %>%
-  clean_names()
-
-vec<- c("Actinomyces", "Corynebacterium", "Arthrobacter", "Rothia", 
-        "Propionibacterium", "Atopobium", "Sediminibacterium", 
-        "Porphyromonas", "Prevotella", "Chryseobacterium", 
-        "Capnocytophaga", "Chryseobacterium", "Flavobacterium", 
-        "Pedobacter", "UnclassifiedTM7", "Bacillus", "Geobacillus", 
-        "Brevibacillus", "Paenibacillus", "Staphylococcus", 
-        "Abiotrophia", "Granulicatella", "Enterococcus", 
-        "Lactobacillus", "Streptococcus", "Clostridium", 
-        "Coprococcus", "Anaerococcus", "Dialister", "Megasphaera", 
-        "Veillonella", "Fusobacterium", "Leptotrichia", 
-        "Brevundimonas", "Afipia", "Bradyrhizobium", "Devosia", 
-        "Methylobacterium", "Mesorhizobium", "Phyllobacterium", 
-        "Rhizobium", "Methylobacterium", "Phyllobacterium", 
-        "Roseomonas", "Novosphingobium", "Sphingobium", 
-        "Sphingomonas", "Achromobacter", "Burkholderia", 
-        "Acidovorax", "Comamonas", "Curvibacter", "Pelomonas",
-        "Cupriavidus", "Duganella", "Herbaspirillum", 
-        "Janthinobacterium", "Massilia", "Oxalobacter", 
-        "Ralstonia", "Leptothrix", "kingella", "Neisseria", 
-        "Escherichia", "Haemophilus", "Acinetobacter", 
-        "Enhydrobacter", "Pseudomonas", "Stenotrophomonas", 
-        "Xanthomonas")
-
-### Add a new column with vector
-# 1) whether the bacteria taxa is "found_in_vector" with values "Yes" or "No"
-DF$found_in_vector <- ifelse(DF$genus %in% vec, "Yes", "No")
-# 2) whether it is a contaminant (1 if found in vector, 0 otherwise)
-DF$contaminant <- ifelse(DF$genus %in% vec, 1, 0)
-#getcounts <- table(DF$found_in_vector)
-#getcounts 
-
-#Create table with proportions and proportional_biomass of overlapping taxa per bee microbiome description (bee ID)
-proportion_contaminants_per_bee_id <- DF %>%
+overlap_per_bee_id <- df %>%
   group_by(bee_id, controlled_for_contamination) %>%
   summarise(
     total_genus = n(),
-    contaminant_genera = sum(contaminant),
+    contaminant_genus = sum(contaminant),
     proportion_contaminant = mean(contaminant),
-    total_average_relative_abundance = sum(average_relative_abundance),
-    contaminant_average_relative_abundance = sum(average_relative_abundance * contaminant),
+    overlap = sum(average_relative_abundance * contaminant),
     ) %>%
   ungroup()
-print(proportion_contaminants_per_bee_id)
+print(overlap_per_bee_id)
 
-# calculate the average proportional_biomass of overlapping taxa for controlled and uncontrolled studies per bee
-average_contaminate_biomass_per_group <- proportion_contaminants_per_bee_id %>%
+# calculate the average relative abundance that overlaps with common contaminants per bee
+average_overlap_per_group <- overlap_per_bee_id %>%
   group_by(controlled_for_contamination) %>%
-  summarise(average_contaminant_proportional_biomass = mean(contaminant_average_relative_abundance))
-print(average_contaminate_biomass_per_group)
+  summarise(
+    average_overlap = mean(overlap, na.rm = TRUE),
+    standard_error_overlap = standard_error(overlap)
+  )
+print(average_overlap_per_group)
 
-shapiro.test(proportion_contaminants_per_bee_id$contaminant_average_relative_abundance)
-# Perform the Wilcoxon rank-sum test
-wilcox_test <- wilcox.test(contaminant_average_relative_abundance ~ controlled_for_contamination, 
-                           data = proportion_contaminants_per_bee_id)
+#test for normality
+shapiro.test(overlap_per_bee_id$overlap)
+
+# Not normally distributed, so perform Wilcoxon rank-sum test
+# Is overlap significantly different between contamination control methods
+wilcox_test <- wilcox.test(overlap ~ controlled_for_contamination, 
+                           data = overlap_per_bee_id)
 # Print the result of the Wilcoxon rank-sum test
-print(wilcox_test)
+print(wilcox_test) #not significant
 
 # Create the box and whisker plot
-ggplot(proportion_contaminants_per_bee_id, aes(x = controlled_for_contamination, y = contaminant_average_relative_abundance)) +
-  geom_boxplot(fill = "lightblue", color = "black", outlier.shape = 8, outlier.size = 1.5) +
-  geom_jitter(width = 0.2, color = "red", alpha = 0.5) +
-  labs(
-    title = "Contaminant Average Relative Abundance by Contamination Control",
-    x = "Controlled for Contamination",
-    y = "Contaminant Average Relative Abundance"
-  ) +
+ggplot(overlap_per_bee_id, 
+       aes(x = controlled_for_contamination, 
+           y = overlap)) +
+  geom_boxplot(fill = "lightblue", 
+               color = "black", 
+               outlier.shape = 8, 
+               outlier.size = 1.5) +
+  geom_jitter(width = 0.2, 
+              color = "red", 
+              alpha = 0.5) +
+  labs(title = "Contaminant Average Relative Abundance by Contamination Control",
+       x = "Controlled for Contamination",
+       y = "Average Relative Abundance Per Bee microbiome of Overlapping taxa") +
   theme_minimal() +
-  theme(
-    plot.title = element_text(size = 14, face = "bold"),
-    axis.title = element_text(size = 12),
-    axis.text = element_text(size = 10)
-  )
+  theme(plot.title = element_text(size = 14, face = "bold"),
+        axis.title = element_text(size = 12),
+        axis.text = element_text(size = 10))
+
+# Outliers identified - these are bees that have a high abudance of Acinetobacter
+# Acinetobacter is a common nectar associate
 
 # Remove the three bees that are outliers
-# Outliers because they are mostly Acinetobacter - a common nectar associate
-DF <- read.delim("all_taxa.txt", header = TRUE, sep = "\t") %>%
+DF <- read.delim("data/adhoc_data.txt", header = TRUE, sep = "\t") %>%
   clean_names() %>%
   filter(!bee_id %in% c("16", "30", "37"))
 
@@ -202,43 +133,33 @@ vec<- c("Actinomyces", "Corynebacterium", "Arthrobacter", "Rothia",
         "Enhydrobacter", "Pseudomonas", "Stenotrophomonas", 
         "Xanthomonas")
 
-### Add a new column with vector
-# 1) whether the bacteria taxa is "found_in_vector" with values "Yes" or "No"
 DF$found_in_vector <- ifelse(DF$genus %in% vec, "Yes", "No")
-# 2) whether it is a contaminant (1 if found in vector, 0 otherwise)
 DF$contaminant <- ifelse(DF$genus %in% vec, 1, 0)
 
-#getcounts <- table(DF$found_in_vector)
-#getcounts #172 do not overlap and 71 overlap with common contaminants
-
-
-
-#Create table with proportions and proportional_biomass of overlapping taxa per bee microbiome description (bee ID)
-proportion_contaminants_per_bee_id <- DF %>%
+overlap_per_bee_id <- DF %>%
   group_by(bee_id, controlled_for_contamination) %>%
   summarise(
     total_genus = n(),
-    contaminant_genera = sum(contaminant),
+    contaminant_genus = sum(contaminant),
     proportion_contaminant = mean(contaminant),
-    total_average_relative_abundance = sum(average_relative_abundance),
-    contaminant_average_relative_abundance = sum(average_relative_abundance * contaminant),
+    overlap = sum(average_relative_abundance * contaminant),
   ) %>%
   ungroup()
-print(proportion_contaminants_per_bee_id)
+print(overlap_per_bee_id)
 
-
-# calculate the average proportional_biomass of overlapping taxa for controlled and uncontrolled studies per bee
-average_contaminate_biomass_per_group <- proportion_contaminants_per_bee_id %>%
+average_overlap_per_group <- overlap_per_bee_id %>%
   group_by(controlled_for_contamination) %>%
-  summarise(average_contaminant_proportional_biomass = mean(contaminant_average_relative_abundance))
-print(average_contaminate_biomass_per_group)
+  summarise(average_overlap = mean(overlap),
+            standard_error_overlap = standard_error(overlap))
+print(average_overlap_per_group)
 
-shapiro.test(proportion_contaminants_per_bee_id$contaminant_average_relative_abundance)
-t.test(proportion_contaminants_per_bee_id$contaminant_average_relative_abundance)
-#do an ANOVA
+shapiro.test(overlap_per_bee_id$overlap) #now follows a normal distribution
+
+# Is overlap significantly different between contamination control methods
+t.test(overlap ~ controlled_for_contamination, data=overlap_per_bee_id)
 
 # Create the box and whisker plot
-ggplot(proportion_contaminants_per_bee_id, aes(x = controlled_for_contamination, y = contaminant_average_relative_abundance)) +
+ggplot(overlap_per_bee_id, aes(x = controlled_for_contamination, y = overlap)) +
   geom_boxplot(fill = "lightblue", color = "black", outlier.shape = 8, outlier.size = 1.5) +
   geom_jitter(width = 0.2, color = "red", alpha = 0.5) +
   labs(

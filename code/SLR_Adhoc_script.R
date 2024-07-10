@@ -94,9 +94,8 @@ ggplot(overlap_per_bee_id,
   geom_jitter(width = 0.2, 
               color = "red", 
               alpha = 0.5) +
-  labs(title = "Contaminant Average Relative Abundance by Contamination Control",
-       x = "Controlled for Contamination",
-       y = "Average Relative Abundance Per Bee microbiome of Overlapping taxa") +
+  labs(x = "Controlled for Contamination",
+       y = "Average Relative Abundance of Overlapping taxa") +
   theme_minimal() +
   theme(plot.title = element_text(size = 14, face = "bold"),
         axis.title = element_text(size = 12),
@@ -163,13 +162,13 @@ ggplot(overlap_per_bee_id, aes(x = controlled_for_contamination, y = overlap)) +
   geom_boxplot(fill = "lightblue", color = "black", outlier.shape = 8, outlier.size = 1.5) +
   geom_jitter(width = 0.2, color = "red", alpha = 0.5) +
   labs(
-    title = "Contaminant Average Relative Abundance by Contamination Control",
     x = "Controlled for Contamination",
-    y = "Contaminant Average Relative Abundance"
+    y = "Relative Abundance of Overlapping taxa"
   ) +
-  theme_minimal() +
+  theme_bw() +
   theme(
-    plot.title = element_text(size = 14, face = "bold"),
-    axis.title = element_text(size = 12),
-    axis.text = element_text(size = 10)
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 10, face = "bold")
   )
+
+ggsave("figures/boxplot.png", height=6, width=9)

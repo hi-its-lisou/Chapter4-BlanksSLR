@@ -73,7 +73,7 @@ ggplot(overlap_per_bee_id,
         axis.title = element_text(size = 12),
         axis.text = element_text(size = 10))
 
-# Outliers identified - these are bees that have a high abudance of Acinetobacter
+# Three outliers identified - these are bees that have a high abudance of Acinetobacter
 # Acinetobacter is a common nectar associate
 
 #Create second vector without Acinetobacter as a potential contaminant
@@ -137,11 +137,13 @@ tidy_overlap_per_bee_id <- overlap_per_bee_id %>%
  theme(axis.title = element_text(size = 12),
        axis.text = element_text(size = 12)))
 
-#ggsave("figures/boxplot.png", height=6, width=9)
+ggsave("figures/boxplot.png", height=6, width=9)
 
 
 ### Is there a difference in the relative abundance of PCTs in papers that do and don't control contam? ###
 # dataframe with the average relative abundance of PCT (including Acinetobacter) per bee 
+standard_error <- function(x) sd(x)/sqrt(length(x)) 
+
 average_overlap_per_group <- overlap_per_bee_id %>%
   group_by(controlled_for_contamination) %>%
   summarise(

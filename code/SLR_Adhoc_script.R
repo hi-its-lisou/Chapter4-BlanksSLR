@@ -117,24 +117,25 @@ overlap_per_bee_id <- df %>%
   ungroup()
 
 #Plot new varibale data with old
+#Pivot longer for the two overlap variables
 tidy_overlap_per_bee_id <- overlap_per_bee_id %>%
   pivot_longer(cols = c(overlap, overlap2), names_to = "variable", values_to = "value")
-
+#Plot it
 (ggplot(tidy_overlap_per_bee_id, 
-       aes(x=variable, y=value, fill=controlled_for_contamination)) +
-  geom_boxplot(position=position_dodge(width=1), 
-               width=0.8,
-               outlier.shape = 8, 
-               outlier.size = 1.5) +
-  scale_fill_manual(values = c("#6B1818", "355E3B", "lightgreen", "6B1818")) +  
-    labs(
-    x = "Controlled for Contamination",
-    y = "Relative Abundance") +
-    scale_x_discrete(labels = c("overlap" = "PPT", "overlap2" = "PPT -Acine")) +
-  theme_classic()+
-    theme(axis.title = element_text(size = 12),
-          axis.text = element_text(size = 12))
-)
+        aes(x=variable, 
+            y=value, 
+            fill=controlled_for_contamination)) +
+ geom_boxplot(position=position_dodge(width=1),
+              width=0.8,
+              outlier.shape = 8, 
+              outlier.size = 1.5) +
+ labs(x="Controlled for Contamination",
+      y = "Relative Abundance") +
+ scale_x_discrete(labels = c("overlap" = "PPT", "overlap2" = "PPT -Acine")) +
+ scale_fill_manual(values = c("#A72525", "355E3B"), name = "Contamination control") +  
+ theme_light()+
+ theme(axis.title = element_text(size = 12),
+       axis.text = element_text(size = 12)))
 
 #ggsave("figures/boxplot.png", height=6, width=9)
 

@@ -90,15 +90,16 @@ print(overlap_per_bee_id)
                  width=0.8,
                  outlier.shape = 8, 
                  outlier.size = 1.5) +
-    labs(x="Controlled for Contamination",
+    labs(x="Contamination control",
          y = "Relative Abundance") +
-    scale_x_discrete(labels = c("overlap" = "PPT", "overlap2" = "PPT -Acine")) +
+    scale_x_discrete(labels = c("No" = "Uncontrolled (n=25)", "Yes" = "Controlled (n=15)")) +
     scale_fill_manual(values = c("#A72525", "355E3B"), name = "Contamination control") +  
     theme_light()+
-    theme(axis.title = element_text(size = 12),
+    theme( legend.position = "none",
+          axis.title = element_text(size = 12),
           axis.text = element_text(size = 12)))
 
-ggsave("figures/boxplot.png", height=6, width=9)
+ggsave("figures/Figure 4.png", height=6, width=9)
 
 # Three outliers identified - these are bees that have a high abudance of Acinetobacter
 # Acinetobacter is a common nectar associate
@@ -190,7 +191,7 @@ tidy_overlap_per_bee_id <- overlap_per_bee_id %>%
     theme(axis.title = element_text(size = 12),
           axis.text = element_text(size = 12)))
 
-#ggsave("figures/Supplementary_boxplot.png", height=6, width=9)
+#ggsave("figures/S5.png", height=6, width=9)
 
 # dataframe with the average relative abundance of PCT (minus Acinetobacter) per bee 
 average_overlap_per_group <- overlap_per_bee_id %>%

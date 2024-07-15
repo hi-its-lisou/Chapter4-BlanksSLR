@@ -18,25 +18,6 @@ df$paper_id <- as.character(df$paper_id)
 unique(df$bee_genus)
 unique(df$bee_species)
 
-### Most reported bacteria across studies ###
-genus_counts <- df %>%
-  group_by(controlled_for_contamination, genus, found_in_vector) %>%
-  reframe(Count = n()) %>%
-  ungroup()
-
-# Separate the counts for "Yes" and "No" groups
-genus_counts_yes <- genus_counts %>%
-  filter(controlled_for_contamination == "Yes") %>%
-  arrange(desc(Count)) %>%
-  head(10)
-print(genus_counts_yes)
-
-genus_counts_no <- genus_counts %>%
-  filter(controlled_for_contamination == "No") %>%
-  arrange(desc(Count)) %>%
-  head(10)
-print(genus_counts_no)
-
 #Create a vector for common contaminants taken from Eisenhofer et al. 2019
 vec<- c("Actinomyces", "Corynebacterium", "Arthrobacter", "Rothia", 
         "Propionibacterium", "Atopobium", "Sediminibacterium", 
@@ -64,12 +45,30 @@ vec<- c("Actinomyces", "Corynebacterium", "Arthrobacter", "Rothia",
 ### Add a new column with vector
 df$found_in_vector <- ifelse(df$genus %in% vec, "Yes", "No")
 df$contaminant <- ifelse(df$genus %in% vec, 1, 0)
-
 #write.table(df,"df.txt",sep= "\t",row.names=FALSE)
 getcounts <- table(df$found_in_vector)
 getcounts #2377 do not overlap and 559 overlap with common contaminants
 
-#Create table with prelative abundance of overlapping taxa per bee
+### Most reported bacteria across studies ###
+genus_counts <- df %>%
+  group_by(controlled_for_contamination, genus, found_in_vector) %>%
+  reframe(Count = n()) %>%
+  ungroup()
+
+# Separate the counts for "Yes" and "No" groups
+genus_counts_yes <- genus_counts %>%
+  filter(controlled_for_contamination == "Yes") %>%
+  arrange(desc(Count)) %>%
+  head(10)
+print(genus_counts_yes)
+
+genus_counts_no <- genus_counts %>%
+  filter(controlled_for_contamination == "No") %>%
+  arrange(desc(Count)) %>%
+  head(10)
+print(genus_counts_no)
+
+#Create table with relative abundance of overlapping taxa per bee
 overlap_per_bee_id <- df %>%
   group_by(bee_id, controlled_for_contamination, paper_id) %>%
   summarise(
@@ -203,7 +202,7 @@ average_overlap_per_group <- overlap_per_bee_id %>%
 print(average_overlap_per_group)
 
 #Test the distribution of data
-shapiro.test(overlap_per_bee_id$overlap) #now follows a normal distribution
+shapiro.test(overlap_per_bee_id$overlap2) #now follows a normal distribution
 
 # It is normally distributed, so using t-test
 t.test(overlap2 ~ controlled_for_contamination, data=overlap_per_bee_id)

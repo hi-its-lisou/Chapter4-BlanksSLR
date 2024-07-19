@@ -1,0 +1,298 @@
+#Modified from Heiss, Andrew. 2021. “A Guide to Modeling Proportions with Bayesian Beta and Zero-Inflated Beta Regression Models.” November 8, 2021. https://doi.org/10.59350/7p1a4-0tw75.
+
+library(tidyverse)        # ggplot, dplyr, %>%, and friends
+library(brms)             # Bayesian modeling through Stan
+library(tidybayes)        # Manipulate Stan objects in a tidy way
+library(broom)            # Convert model objects to data frames
+library(broom.mixed)      # Convert brms model objects to data frames
+library(betareg)          # Run beta regression models
+library(extraDistr)       # Use extra distributions like dprop()
+library(ggdist)           # Special geoms for posterior distributions
+library(gghalves)         # Special half geoms
+library(ggbeeswarm)       # Special distribution-shaped point jittering
+library(ggrepel)          # Automatically position labels
+library(patchwork)        # Combine ggplot objects
+library(scales)           # Format numbers in nice ways
+library(marginaleffects)  # Calculate marginal effects for regression models
+library(modelsummary)     # Create side-by-side regression tables
+library(extrafont)
+library(collapse)
+library(janitor)
+set.seed(1234)  # Make everything reproducible
+windowsFonts()
+
+# Define the goodness-of-fit stats to include in modelsummary()
+gof_stuff <- tribble(
+  ~raw, ~clean, ~fmt,
+  "nobs", "N", 0,
+  "r.squared", "R²", 3
+)
+
+# Custom ggplot theme to make pretty plots
+# Get the font at https://fonts.google.com/specimen/Barlow+Semi+Condensed
+theme_clean <- function() {
+  theme_minimal(base_family = "Barlow Semi Condensed") +
+    theme(panel.grid.minor = element_blank(),
+          plot.title = element_text(family = "BarlowSemiCondensed-Bold"),
+          axis.title = element_text(family = "BarlowSemiCondensed-Medium"),
+          strip.text = element_text(family = "BarlowSemiCondensed-Bold",
+                                    size = rel(1), hjust = 0),
+          strip.background = element_rect(fill = "grey80", color = NA))
+}
+
+# Make labels use Barlow by default
+update_geom_defaults("label_repel", list(family = "Arial Narrow"))
+
+# Format things as percentage points
+label_pp <- label_number(accuracy = 1, scale = 100, 
+                         suffix = " pp.", style_negative = "minus")
+label_pp_tiny <- label_number(accuracy = 0.01, scale = 100, 
+                              suffix = " pp.", style_negative = "minus")
+#################################
+#Import and clean data
+df<- read.delim("adhoc_data.txt", header = TRUE, sep = "\t") %>%
+  clean_names()
+df <- filter(df, average_relative_abundance >=0.1)
+
+#df <- filter(df, !bee_id %in% c("27", "30"))
+df$controlled_for_contamination <- as.factor(df$controlled_for_contamination)
+df$bee_id <- as.character(df$bee_id)
+df$paper_id <- as.character(df$paper_id)
+
+#Create a vector for common contaminants taken from Eisenhofer et al. 2019
+vec<- c("Actinomyces", "Corynebacterium", "Arthrobacter", "Rothia", 
+        "Propionibacterium", "Atopobium", "Sediminibacterium", 
+        "Porphyromonas", "Prevotella", "Chryseobacterium", 
+        "Capnocytophaga", "Chryseobacterium", "Flavobacterium", 
+        "Pedobacter", "UnclassifiedTM7", "Bacillus", "Geobacillus", 
+        "Brevibacillus", "Paenibacillus", "Staphylococcus", 
+        "Abiotrophia", "Granulicatella", "Enterococcus", 
+        "Lactobacillus", "Streptococcus", "Clostridium", 
+        "Coprococcus", "Anaerococcus", "Dialister", "Megasphaera", 
+        "Veillonella", "Fusobacterium", "Leptotrichia", 
+        "Brevundimonas", "Afipia", "Bradyrhizobium", "Devosia", 
+        "Methylobacterium", "Mesorhizobium", "Phyllobacterium", 
+        "Rhizobium", "Methylobacterium", "Phyllobacterium", 
+        "Roseomonas", "Novosphingobium", "Sphingobium", 
+        "Sphingomonas", "Achromobacter", "Burkholderia", 
+        "Acidovorax", "Comamonas", "Curvibacter", "Pelomonas",
+        "Cupriavidus", "Duganella", "Herbaspirillum", 
+        "Janthinobacterium", "Massilia", "Oxalobacter", 
+        "Ralstonia", "Leptothrix", "kingella", "Neisseria", 
+        "Escherichia", "Haemophilus", "Acinetobacter", 
+        "Enhydrobacter", "Pseudomonas", "Stenotrophomonas", 
+        "Xanthomonas")
+
+### Add a new column with vector
+df$found_in_vector <- ifelse(df$genus %in% vec, "Yes", "No")
+df$contaminant <- ifelse(df$genus %in% vec, 1, 0)
+
+overlap_per_bee_id <- df %>%
+  group_by(bee_id, controlled_for_contamination, paper_id) %>%
+  summarise(
+    total_genus = n(),
+    contaminant_genus = sum(contaminant),
+    total_relative_abundance = sum(average_relative_abundance),
+    overlap = sum(average_relative_abundance * contaminant),
+  ) %>%
+  ungroup()
+print(overlap_per_bee_id)
+
+
+((quota_halves <- ggplot(overlap_per_bee_id, aes(x = controlled_for_contamination, y = overlap)) +
+    geom_half_point(aes(color = controlled_for_contamination), 
+                    transformation = position_quasirandom(width = 0.1),
+                    side = "l", size = 2, alpha = 0.5) +
+    geom_half_boxplot(aes(fill = controlled_for_contamination), side = "r") + 
+    scale_y_continuous(labels = label_percent()) +
+    scale_fill_viridis_d(option = "plasma", end = 0.8) +
+    scale_color_viridis_d(option = "plasma", end = 0.8) +
+    guides(color = "none", fill = "none") +
+    labs(x = "controlled_for_contamination", y = "Proportion of overlap") +
+    theme_clean()))
+
+(quota_densities <- ggplot(overlap_per_bee_id, aes(x = overlap, fill = controlled_for_contamination)) +
+    geom_density(alpha = 0.6) +
+    scale_x_continuous(labels = label_percent()) +
+    scale_fill_viridis_d(option = "plasma", end = 0.8) +
+    labs(x = "Percentage of overlap", y = "Density", fill = "controlled_for_contamination") +
+    theme_clean() +
+    theme(legend.position = "bottom"))
+
+
+#Test the distribution of data
+shapiro.test(overlap_per_bee_id$overlap)
+##############################################################################
+### Zero inflated - Beta regression 
+#How many zeros?
+overlap_per_bee_id %>% 
+  count(overlap == 0) %>% 
+  mutate(prop = n / sum(n))
+
+#model 
+model_beta_zi_int_only <- brm(
+  bf(overlap ~ controlled_for_contamination,
+     phi ~ controlled_for_contamination,
+     zi ~ 1),
+  data = overlap_per_bee_id,
+  family = zero_inflated_beta(),
+  chains = 4, iter = 2000, warmup = 1000,
+  cores = 4, seed = 1234,
+  backend = "cmdstanr",
+  file = "model_beta_zi_int_only"
+)
+
+tidy(model_beta_zi_int_only, effects = "fixed")
+
+zi_intercept <- tidy(model_beta_zi_int_only, effects = "fixed") %>% 
+  filter(component == "zi", term == "(Intercept)") %>% 
+  pull(estimate)
+
+# Logit scale intercept
+zi_intercept
+## b_zi_Intercept 
+##          0.004746495  
+
+# Transformed to a probability/proportion
+plogis(zi_intercept)
+## b_zi_Intercept 
+##         0.5011866 #After transforming the intercept to a probability/proportion, we see that it is now basically the same as the proportion of zeros in the data
+
+beta_zi_pred_int <- model_beta_zi_int_only %>% 
+  predicted_draws(newdata = tibble(controlled_for_contamination = c("Yes", "No"))) %>% 
+  mutate(is_zero = .prediction == 0,
+         .prediction = ifelse(is_zero, .prediction - 0.01, .prediction))
+
+ggplot(beta_zi_pred_int, aes(x = .prediction)) +
+  geom_histogram(aes(fill = is_zero), binwidth = 0.025, 
+                 boundary = 0, color = "white") +
+  geom_vline(xintercept = 0) +
+  scale_x_continuous(labels = label_percent()) +
+  scale_fill_viridis_d(option = "plasma", end = 0.5,
+                       guide = guide_legend(reverse = TRUE)) +
+  labs(x = "Predicted proportion of overlap", 
+       y = "Count", fill = "Is zero?") +
+  facet_wrap(vars(controlled_for_contamination), ncol = 2,
+             labeller = labeller(controlled_for_contamination = c("Yes" = "Controlled", 
+                                                                  "No" = "Uncontrolled"))) + 
+  theme_clean() +
+  theme(legend.position = "bottom")
+
+#model with zi
+model_beta_zi <- brm(
+  bf(overlap ~ controlled_for_contamination,
+     phi ~ controlled_for_contamination,
+     zi ~ controlled_for_contamination),
+  data = overlap_per_bee_id,
+  family = zero_inflated_beta(),
+  chains = 4, iter = 2000, warmup = 1000,
+  cores = 4, seed = 1234,
+  backend = "cmdstanr",
+  file = "model_beta_zi"
+)
+
+tidy(model_beta_zi, effects = "fixed")
+
+zi_intercept <- tidy(model_beta_zi, effects = "fixed") %>% 
+  filter(component == "zi", term == "(Intercept)") %>% 
+  pull(estimate)
+
+zi_quota <- tidy(model_beta_zi, effects = "fixed") %>% 
+  filter(component == "zi", term == "controlled_for_contaminationYes") %>% 
+  pull(estimate)
+
+plogis(zi_intercept + zi_quota) - plogis(zi_intercept)
+## b_zi_Intercept 
+##        0.1676273 
+#Based on this estimate, controlling for contamination increases the proportion of 0s by 16.8%.
+
+
+pred_beta_zi <- model_beta_zi %>% 
+  epred_draws(newdata = expand_grid(controlled_for_contamination = c("Yes", "No")),
+              dpar = "zi")
+
+# We now have columns for the overall prediction (.epred) and for the
+# zero-inflation probability (zi)
+head(pred_beta_zi)
+## # A tibble: 6 × 7
+# controlled_for_contamination  .row .chain .iteration .draw .epred    zi
+# <chr>                        <int>  <int>      <int> <int>  <dbl> <dbl>
+#   1 Yes                              1     NA         NA     1 0.0640 0.860
+# 2 Yes                              1     NA         NA     2 0.277  0.479
+# 3 Yes                              1     NA         NA     3 0.216  0.406
+# 4 Yes                              1     NA         NA     4 0.181  0.569
+# 5 Yes                              1     NA         NA     5 0.198  0.659
+# 6 Yes                              1     NA         NA     6 0.0960 0.653
+
+# Look at the average zero-inflation probability across quota
+pred_beta_zi %>%
+  group_by(controlled_for_contamination) %>% 
+  median_hdci(zi)
+# A tibble: 2 × 7
+#controlled_for_contamination    zi .lower .upper .width .point .interval
+#<chr>                        <dbl>  <dbl>  <dbl>  <dbl> <chr>  <chr>    
+#  1 No                           0.438  0.258  0.624   0.95 median hdci     
+#  2 Yes                          0.599  0.356  0.821   0.95 median hdc
+
+pred_beta_zi %>% 
+  compare_levels(variable = zi, by = controlled_for_contamination) %>% 
+  median_hdci()
+#controlled_for_contamination    zi .lower .upper .width .point .interval
+#   <chr>                     <dbl>  <dbl>  <dbl>  <dbl> <chr>  <chr>    
+#  1 Yes - No                  0.162 -0.144  0.471   0.95 median hdci 
+
+
+mfx_quota_zi <- pred_beta_zi %>% 
+  compare_levels(variable = zi, by = controlled_for_contamination)
+
+ggplot(mfx_quota_zi, aes(x = zi)) +
+  stat_halfeye(.width = c(0.8, 0.95), point_interval = "median_hdi",
+               fill = "#fb9e07") +
+  scale_x_continuous(labels = label_pp) +
+  labs(x = "Average marginal effect of controlling contamination on the proportion of PCTs", 
+       y = NULL, caption = "80% and 95% credible intervals shown in black") +
+  theme_clean()
+
+
+
+beta_zi_pred <- model_beta_zi %>% 
+  predicted_draws(newdata = tibble(controlled_for_contamination = c("No", "Yes"))) %>% 
+  mutate(is_zero = .prediction == 0,
+         .prediction = ifelse(is_zero, .prediction - 0.01, .prediction))
+
+ggplot(beta_zi_pred, aes(x = .prediction)) +
+  geom_histogram(aes(fill = is_zero), binwidth = 0.025, 
+                 boundary = 0, color = "white") +
+  geom_vline(xintercept = 0) +
+  scale_x_continuous(labels = label_percent()) +
+  scale_fill_viridis_d(option = "plasma", end = 0.5,
+                       guide = guide_legend(reverse = TRUE)) +
+  labs(x = "Predicted proportion of PCTs", 
+       y = "Count", fill = "Is zero?") +
+  facet_wrap(vars(controlled_for_contamination), ncol = 2,
+             labeller = labeller(controlled_for_contamination = c("Yes" = "Controlled", 
+                                                                  "No" = "Uncontrolled"))) +
+  theme_clean() +
+  theme(legend.position = "bottom")
+
+### Average marginal effects, incorporating the zero process
+
+ame_beta_zi <- model_beta_zi %>%
+  avg_comparisons(variables = "controlled_for_contamination") %>% 
+  posterior_draws()
+
+ame_beta_zi %>% median_hdi(draw)
+# A tibble: 1 × 6
+#draw .lower .upper .width .point .interval
+#<dbl>  <dbl>  <dbl>  <dbl> <chr>  <chr>    
+#  1 -0.118 -0.296 0.0519   0.95 median hdi 
+
+ggplot(ame_beta_zi, aes(x = draw)) +
+  stat_halfeye(.width = c(0.8, 0.95), point_interval = "median_hdi",
+               fill = "#bc3032") +
+  scale_x_continuous() +
+  labs(x = "Average marginal effect of controlling contamination on the proportion of PCTs", y = NULL,
+       caption = "80% and 95% credible intervals shown in black") +
+  theme_clean()
+
+#Controlling for contamination reduces the proportion of PCTs by 11.8%

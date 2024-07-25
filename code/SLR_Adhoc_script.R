@@ -5,14 +5,21 @@ library(tidyverse)
 library(dplyr)
 library(ggpubr)
 library(lme4)
+library(brms)
+library(betareg)
+
+
+
 
 #Import and clean data
 df<- read.delim("data/adhoc_data.txt", header = TRUE, sep = "\t") %>%
   clean_names()
 
 df$controlled_for_contamination <- as.factor(df$controlled_for_contamination)
-df$bee_id <- as.character(df$bee_id)
 df$paper_id <- as.character(df$paper_id)
+df$bee_id <- as.character(df$bee_id)
+
+#df <- filter(df, average_relative_abundance >=0.01)
 
 #Bees in the data 
 unique(df$bee_genus)
@@ -68,64 +75,91 @@ genus_counts_no <- genus_counts %>%
   head(10)
 print(genus_counts_no)
 
-#Create table with relative abundance of overlapping taxa per bee
+
+
+# Assuming 'df' is your initial dataframe
 overlap_per_bee_id <- df %>%
   group_by(bee_id, controlled_for_contamination, paper_id) %>%
   summarise(
     total_genus = n(),
     contaminant_genus = sum(contaminant),
     total_relative_abundance = sum(average_relative_abundance),
-    overlap = sum(average_relative_abundance * contaminant),
-    ) %>%
+    overlap = sum(average_relative_abundance * contaminant)
+  ) %>%
   ungroup()
+
 print(overlap_per_bee_id)
 
-# Create the box and whisker plot
-#Plot it
-(ggplot(overlap_per_bee_id, 
-        aes(x=controlled_for_contamination, 
-            y=overlap, 
-            fill=controlled_for_contamination)) +
-    geom_boxplot(position=position_dodge(width=1),
-                 width=0.8,
-                 outlier.shape = 8, 
-                 outlier.size = 1.5) +
-    labs(x="Contamination control",
-         y = "Relative Abundance") +
-    scale_x_discrete(labels = c("No" = "Uncontrolled (n=25)", "Yes" = "Controlled (n=15)")) +
-    scale_fill_manual(values = c("#A72525", "355E3B"), name = "Contamination control") +  
-    theme_light()+
-    theme( legend.position = "none",
-          axis.title = element_text(size = 12),
-          axis.text = element_text(size = 12)))
+# Function to calculate standard error
+standard_error <- function(x) sd(x) / sqrt(length(x)) 
 
-ggsave("figures/Figure 4.png", height=6, width=9)
-
-# Three outliers identified - these are bees that have a high abudance of Acinetobacter
-# Acinetobacter is a common nectar associate
-
-
-### Is there a difference in the relative abundance of PCTs in papers that do and don't control contam? ###
-# dataframe with the average relative abundance of PCT (including Acinetobacter) per bee 
-standard_error <- function(x) sd(x)/sqrt(length(x)) 
-
+# Dataframe with the average relative abundance of PCT per bee
 average_overlap_per_group <- overlap_per_bee_id %>%
   group_by(controlled_for_contamination) %>%
   summarise(
     average_overlap = mean(overlap, na.rm = TRUE),
-    standard_error_overlap = standard_error(overlap)
+    standard_error_overlap = standard_error(overlap),
+    n = n(),
+    lower_ci = average_overlap - qt(0.95, df = n-1) * standard_error_overlap,
+    upper_ci = average_overlap + qt(0.95, df = n-1) * standard_error_overlap
   )
+
 print(average_overlap_per_group)
+
+# Plotting the boxplot with error bars for 95% confidence intervals
+p3 <- (ggplot(overlap_per_bee_id, 
+              aes(x=controlled_for_contamination, 
+                  y=overlap, 
+                  fill=controlled_for_contamination)) +
+         geom_boxplot(position=position_dodge(width=2),
+                      width=0.8,
+                      outlier.shape = 8, 
+                      outlier.size = 1.5) +
+         geom_errorbar(data = average_overlap_per_group, 
+                       aes(x = controlled_for_contamination, 
+                           ymin = lower_ci, 
+                           ymax = upper_ci, 
+                           y = average_overlap), 
+                       width = 0.2,
+                       color = "#56B4E9", 
+                       size = 1.5) +
+         geom_point(size=3) +
+                  labs(x="Contamination control",
+              y = "Relative Abundance") +
+         scale_x_discrete(labels = c("No" = "Uncontrolled (n=25)", "Yes" = "Controlled (n=15)")) +
+         scale_fill_manual(values = c("#E69F00", "#009E73"), name = "Contamination control") +  
+         theme_light() +
+         theme( legend.position = "none",
+                axis.title = element_text(size = 12),
+                axis.text = element_text(size = 12))
+)
+p3
+
+
+ggsave("figures/Figure 4.png", height=6, width=9)
+
+
+
+
 
 #Test the distribution of data
 shapiro.test(overlap_per_bee_id$overlap)
 
 # Not normally distributed, so using a generalised linear mixed model with random varibale set to paper_id
+wilcox.test(overlap ~ controlled_for_contamination,
+            data = overlap_per_bee_id)
+
+
 glmm <- glmer(overlap ~ controlled_for_contamination+(1|paper_id), 
               data = overlap_per_bee_id,
               family = binomial)
 summary(glmm)
 
+
+beta <- betareg(overlap ~ controlled_for_contamination,
+        data = overlap_per_bee_id)
+
+summary(beta)
 
 ### Supplementary material ###
 #removing Acinetobacter as a potential contaminant
@@ -203,9 +237,112 @@ average_overlap_per_group <- overlap_per_bee_id %>%
 print(average_overlap_per_group)
 
 #Test the distribution of data
-shapiro.test(overlap_per_bee_id$overlap2) #now follows a normal distribution
+shapiro.test(overlap_per_bee_id$overlap2)
 
-# It is normally distributed, so using t-test
-t.test(overlap2 ~ controlled_for_contamination, data=overlap_per_bee_id)
+wilcox.test(overlap2 ~ controlled_for_contamination, 
+            data = overlap_per_bee_id)
+
+glmm <- glmer(overlap2 ~ controlled_for_contamination+(1|paper_id), 
+              data = overlap_per_bee_id,
+              family = binomial)
+summary(glmm)
+
+
+
+
+
+######https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8265668/##################################3
+library(vegan)
+
+df<- read.delim("data/adhoc_data.txt", header = TRUE, sep = "\t") %>%
+  clean_names()
+df$controlled_for_contamination <- as.factor(df$controlled_for_contamination)
+df$paper_id <- as.factor(df$paper_id)
+df$bee_id <- as.character(df$bee_id)
+
+# Pivot the data to create a community matrix
+community_matrix <- df %>%
+  select(bee_id, genus, average_relative_abundance) %>%
+  spread(key = genus, value = average_relative_abundance)
+# Replace missing values with zeros
+community_matrix[is.na(community_matrix)] <- 0
+# Set bee_id as row names
+rownames(community_matrix) <- community_matrix$bee_id
+community_matrix <- community_matrix[ , -1]
+# Add metadata for plotting
+metadata <- df %>%
+  select(bee_id, controlled_for_contamination, paper_id, bee_genus, bee_species) %>%
+  distinct()
+
+# Compute Bray-Curtis dissimilarity matrix
+dissimilarity_matrix <- vegdist(community_matrix, method = "bray")
+
+
+# Perform NMDS
+nmds <- metaMDS(dissimilarity_matrix, k = 2)
+# Merge metadata with NMDS scores
+nmds_scores <- as.data.frame(scores(nmds))
+nmds_scores$bee_id <- rownames(nmds_scores)
+nmds_data <- merge(nmds_scores, metadata, by = "bee_id")
+
+# Plot NMDS
+manual_nmds <- ggplot(nmds_data, aes(x = NMDS1, y = NMDS2, color = controlled_for_contamination)) +
+  geom_point(size = 3) +
+  theme_minimal() +
+  scale_color_manual(values = c("#A72525", "355E3B"), name = "Contamination control") +
+    labs(title = "Bray-Curtis beta diversity per bee",
+       x = "NMDS1",
+       y = "NMDS2")
+
+
+# Perform PERMANOVA
+adonis_result <- adonis2(dissimilarity_matrix ~ controlled_for_contamination, data = metadata)
+print(adonis_result)
+
+# Perform SIMPER analysis
+simper_result <- simper(community_matrix, metadata$controlled_for_contamination)
+summary(simper_result)
+#Flavobacterium, Stenotrophomonas, Atopobium
+
+
+
+
+# Calculate Shannon diversity index
+shannon_diversity <- diversity(community_matrix, index = "shannon")
+# Calculate Evenness
+evenness <- shannon_diversity / log(specnumber(community_matrix))
+# Combine alpha diversity indices with metadata
+alpha_diversity_df <- data.frame(
+  bee_id = rownames(community_matrix),
+  shannon_diversity = shannon_diversity,
+  evenness = evenness
+)
+
+# Join with metadata
+alpha_diversity_df <- alpha_diversity_df %>%
+  left_join(metadata, by = "bee_id")
+
+
+# Plot Shannon Diversity Index
+ggplot(alpha_diversity_df, aes(x = controlled_for_contamination, y = shannon_diversity, fill = controlled_for_contamination)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Shannon Diversity Index by Contamination Control",
+       x = "Controlled for Contamination",
+       y = "Shannon Diversity Index") +
+  scale_fill_manual(values = c("#A72525", "355E3B"), name = "Contamination control") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# Plot Evenness
+ggplot(alpha_diversity_df, aes(x = controlled_for_contamination, y = evenness, fill = controlled_for_contamination)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Evenness by Contamination Control",
+       x = "Controlled for Contamination",
+       y = "Evenness") +
+  scale_fill_manual(values = c("#A72525", "355E3B"), name = "Contamination control") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
 
 

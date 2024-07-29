@@ -1,3 +1,5 @@
+Other
+Acinetobacter
 Actinomyces
 Corynebacterium
 Arthrobacter
@@ -64,5 +66,3 @@ Enhydrobacter
 Pseudomonas
 Stenotrophomonas
 Xanthomonas
-Acinetobacter
-Other

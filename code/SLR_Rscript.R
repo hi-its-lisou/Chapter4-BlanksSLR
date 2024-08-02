@@ -85,6 +85,7 @@ controlled_contam <- table(SLR_DF$was_there_a_comparison_with_their_samples_to_c
 controlled_contam <- data.frame(was_there_a_comparison_with_their_samples_to_control_for_contamination = names(controlled_contam), Count = as.numeric(controlled_contam))
 controlled_contam <- controlled_contam %>% mutate(Percentage = (Count / sum(Count)) * 100)
 controlled_contam
+33/243
 
 ### Figure 3 - Part A
 #new dataframe to split negative control use further according to year
@@ -237,12 +238,6 @@ fig2b
 
 ggsave("figures/Figure2b.png", height=6, width=9.5)
 
-
-(AE_plot <- cowplot::plot_grid(fig2a,
-                              fig2b,
-                              rel_widths = c(1, 1)))
-
-
 #Plot the number of publications per year to obtain p value
 SLR_DF %>%
   group_by(year) %>%
@@ -274,7 +269,6 @@ ggplot(SLR_DF, aes(x = is_referenced_by_count)) +
   )# Does not follow a normal distribution
 
 # Mann-Whitney U test on whether use use negative controls and the number of references
-wilcox.test(is_referenced_by_count ~ did_they_use_negative_controls, data = SLR_DF)
 wilcox.test(is_referenced_by_count ~ was_there_a_comparison_with_their_samples_to_control_for_contamination=="Yes", data = SLR_DF)
 
 ##########################
